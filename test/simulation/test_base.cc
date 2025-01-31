@@ -17,7 +17,6 @@
 #include "test_base.h"
 
 #include <gtest/gtest.h>
-#include <pw_containers/vector.h>
 
 #include "chre/core/event_loop_manager.h"
 #include "chre/platform/linux/platform_log.h"
@@ -29,12 +28,17 @@
 #include "inc/test_util.h"
 #include "test_util.h"
 
+#include "pw_bluetooth_proxy/h4_packet.h"
+#include "pw_containers/vector.h"
+#include "pw_function/function.h"
+
 using ::chre::message::MessageRouter;
 using ::chre::message::MessageRouterSingleton;
 using ::chre::message::Session;
+using pw::bluetooth::proxy::H4PacketWithH4;
+using pw::bluetooth::proxy::H4PacketWithHci;
 
 namespace chre {
-
 namespace {
 
 constexpr size_t kMaxMessageHubs = 5;
@@ -48,9 +52,9 @@ pw::Vector<Session, kMaxSessions> gSessions;
  * This base class initializes and runs the event loop.
  *
  * This test framework makes use of the TestEventQueue as a primary method
- * of a test execution barrier (see its documentation for details). To simplify
- * the test execution flow, it is encouraged that any communication between
- * threads (e.g. a nanoapp and the main test thread) through this
+ * of a test execution barrier (see its documentation for details). To
+ * simplify the test execution flow, it is encouraged that any communication
+ * between threads (e.g. a nanoapp and the main test thread) through this
  * TestEventQueue. In this way, we can design simulation tests in a way that
  * validates an expected sequence of events in a well-defined manner.
  *
@@ -65,6 +69,14 @@ void TestBase::SetUp() {
   chre::PlatformLogSingleton::init();
   TaskManagerSingleton::init();
   TestEventQueueSingleton::init();
+  // TODO(b/425729398): Add mocking to verify ProxyHost callbacks for BLE
+  // socket simulation tests.
+  mProxyHost.emplace(/*send_to_host_fn=*/[](H4PacketWithHci &&) {},
+                     /*send_to_controller_fn=*/[](H4PacketWithH4 &&) {},
+                     /*le_acl_credits_to_reserve=*/0,
+                     /*br_edr_acl_credits_to_reserve=*/0);
+
+  initBleSocketManager(mProxyHost.value());
   chre::initCommon();
   EventLoopManagerSingleton::get()->lateInit();
 

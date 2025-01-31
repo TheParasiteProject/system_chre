@@ -16,6 +16,10 @@
 
 #pragma once
 
+#ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
+#include "pw_bluetooth_proxy/proxy_host.h"
+#endif  // CHRE_BLE_SOCKET_SUPPORT_ENABLED
+
 namespace chre {
 
 /**
@@ -34,5 +38,15 @@ void initCommon();
  * EventLoopManagerSingleton and the *Manager objects passed into it.
  */
 void deinitCommon();
+
+#ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
+/**
+ * Initializes the BleSocketManager in systems where BT socket offload is
+ * supported.
+ *
+ * @param proxyHost BT ProxyHost used by the BleSocketManager
+ */
+void initBleSocketManager(pw::bluetooth::proxy::ProxyHost &proxyHost);
+#endif  // CHRE_BLE_SOCKET_SUPPORT_ENABLED
 
 }  // namespace chre

@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 #include <cstdint>
+#include <optional>
 #include <thread>
 
 #include "chre/core/event_loop_manager.h"
@@ -28,6 +29,8 @@
 #include "chre/util/system/message_router.h"
 #include "chre/util/time.h"
 #include "test_event_queue.h"
+
+#include "pw_bluetooth_proxy/proxy_host.h"
 
 namespace chre {
 
@@ -128,6 +131,7 @@ class TestBase : public testing::Test {
   std::thread mChreThread;
   SystemTimer mSystemTimer;
   message::MessageRouter::MessageHub mChreMessageHub;
+  std::optional<pw::bluetooth::proxy::ProxyHost> mProxyHost;
 };
 
 }  // namespace chre

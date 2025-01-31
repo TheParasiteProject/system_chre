@@ -20,6 +20,7 @@
 #include <optional>
 
 #include "chre/core/event_loop_manager.h"
+#include "chre/platform/assert.h"
 #include "chre/platform/log.h"
 #include "chre/platform/system_time.h"
 #include "chre/platform/version.h"
@@ -38,17 +39,18 @@
  * Platforms using this file should perform initialization in this order:
  *
  *  1. Initialize CHRE logging
- *  2. initCommon()
- *  3. Start the thread that will run the EventLoop
+ *  2. initBleSocketManager() (if CHRE_BLE_SOCKET_SUPPORT_ENABLED is true)
+ *  3. initCommon()
+ *  4. Start the thread that will run the EventLoop
  *
  * After this point, it is safe for other threads to access CHRE, e.g. incoming
  * requests from the host can be posted to the EventLoop. Then within the CHRE
  * thread:
  *
- *  4. EventLoopManager::lateInit() (this typically involves blocking on
+ *  5. EventLoopManager::lateInit() (this typically involves blocking on
  *     readiness of other subsystems as part of PAL initialization)
- *  5. loadStaticNanoapps()
- *  6. EventLoopManagerSingleton::get()->getEventLoop().run()
+ *  6. loadStaticNanoapps()
+ *  7. EventLoopManagerSingleton::get()->getEventLoop().run()
  *
  * Platforms may also perform additional platform-specific initialization steps
  * at any point along the way as needed.
@@ -96,9 +98,10 @@ std::optional<WwanRequestManager> gWwanRequestManager;
 
 static const char *kChreVersionString = chre::getChreVersionString();
 
-BleSocketManager *initAndGetBleSocketManager() {
+BleSocketManager *getBleSocketManager() {
 #ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
-  gBleSocketManager.emplace();
+  CHRE_ASSERT_LOG(gBleSocketManager.has_value(),
+                  "Initialized EventLoopManager before BleSocketManager");
   return &gBleSocketManager.value();
 #else
   return nullptr;
@@ -172,7 +175,7 @@ void initCommon() {
   SystemTime::init();
 
   EventLoopManagerSingleton::init(
-      initAndGetBleSocketManager(), initAndGetGnssManager(),
+      getBleSocketManager(), initAndGetGnssManager(),
       initAndGetWifiRequestManager(), initAndGetWwanRequestManager());
 }
 
@@ -186,5 +189,11 @@ void deinitCommon() {
 
   LOGD("CHRE deinit");
 }
+
+#ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
+void initBleSocketManager(pw::bluetooth::proxy::ProxyHost &proxyHost) {
+  gBleSocketManager.emplace(proxyHost);
+}
+#endif  // CHRE_BLE_SOCKET_SUPPORT_ENABLED
 
 }  // namespace chre

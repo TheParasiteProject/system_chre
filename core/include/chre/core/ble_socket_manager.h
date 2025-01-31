@@ -19,6 +19,10 @@
 #ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
 
 #include "chre/core/ble_l2cap_coc_socket_data.h"
+#include "chre/platform/platform_bt_socket.h"
+#include "chre/platform/platform_bt_socket_resources.h"
+#include "chre/util/fixed_size_vector.h"
+#include "chre/util/memory_pool.h"
 #include "chre_api/chre.h"
 
 namespace chre {
@@ -29,19 +33,57 @@ namespace chre {
  */
 class BleSocketManager : public NonCopyable {
  public:
-  chreError socketConnected(const BleL2capCocSocketData & /* socketData */) {
-    return CHRE_ERROR_NOT_SUPPORTED;
-  }
+  // Forward all arguments passed to the BleSocketManager constructor to the
+  // PlatformBtSocketResources constructor
+  template <typename... Args>
+  BleSocketManager(Args &&...args)
+      : mPlatformBtSocketResources(std::forward<Args>(args)...) {}
 
-  bool acceptBleSocket(uint64_t /*socketId*/) {
-    return false;
-  }
+  /**
+   * Creates a PlatformBtSocket and notifies the nanoapp that a BLE socket has
+   * been connected and is ready to be used.
+   *
+   * @param socketData Metadata for the BLE socket.
+   * @return chreError Result of whether the socket was created successfully and
+   * whether the nanoapp has accepted it.
+   */
+  chreError socketConnected(const BleL2capCocSocketData &socketData);
 
+  /**
+   * Callback a nanoapp uses to accept the socket. This will be used in the
+   * middle of socketConnected and is part of a synchronous interaction with the
+   * nanoapp
+   */
+  bool acceptBleSocket(uint64_t socketId);
+
+  /**
+   * Sends a packet to the socket.
+   *
+   * @see chreBleSocketSend
+   */
   int32_t sendBleSocketPacket(
       uint64_t /*socketId*/, const void * /*data*/, uint16_t /*length*/,
       chreBleSocketPacketFreeFunction * /*freeCallback*/) {
     return CHRE_ERROR_NOT_SUPPORTED;
   }
+
+ private:
+  static constexpr uint8_t kMaxNumSockets = 3;
+
+  /**
+   * Tracks BT sockets and their corresponding nanoapp.
+   *
+   * TODO(b/418832158): We can't use a CHRE FixedSizeVector here because some
+   * PlatformBtSocket implementations have dependencies which delete the copy
+   * and move assignment operators. Look into adding move assignment operators
+   * to those dependencies and refactor this code when finished.
+   */
+  MemoryPool<PlatformBtSocket, kMaxNumSockets> mBtSockets;
+
+  /**
+   * Platform resources used for creating a new BT socket.
+   */
+  PlatformBtSocketResources mPlatformBtSocketResources;
 };
 
 }  // namespace chre
