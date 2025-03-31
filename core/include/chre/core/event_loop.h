@@ -545,7 +545,7 @@ class EventLoop : public NonCopyable {
 
   /**
    * Shared functionality to distributeEvent and distributeEventSync. Should
-   * only be called by those functions. Hnadles event distribution and logging
+   * only be called by those functions. Handles event distribution and logging
    * without any pre- or post-processing.
    *
    * @param event The Event to distribute to Nanoapps
