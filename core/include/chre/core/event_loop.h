@@ -194,6 +194,10 @@ class EventLoop : public NonCopyable {
    * @param targetInstanceId The instance ID of the destination of this event
    * @param targetGroupMask Mask used to limit the recipients that are
    *        registered to receive this event
+   *
+   * @return True if the event was delivered to any nanoapps, otherwise false
+   *
+   * @see distributeEventCommon
    */
   bool distributeEventSync(uint16_t eventType, void *eventData,
                            uint16_t targetInstanceId = kBroadcastInstanceId,
