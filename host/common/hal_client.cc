@@ -125,7 +125,7 @@ void HalClient::onHalDisconnected(void *cookie) {
        halClient->mClientName.c_str());
 
   HalError result = halClient->initConnection();
-  uint64_t duration = ::android::elapsedRealtime() - startTime;
+  uint64_t duration = elapsedRealtime() - startTime;
   if (result != HalError::SUCCESS) {
     LOGE("Failed to fully reconnect to CHRE HAL after %" PRIu64
          "ms, HalErrorCode: %" PRIi32,
@@ -216,6 +216,14 @@ void HalClient::tryReconnectEndpoints(HalClient *halClient) {
            halClient->mClientName.c_str());
     }
   }
+}
+
+ScopedAStatus HalClient::registerEndpointHub(
+    const std::shared_ptr<IEndpointCallback> &callback, const HubInfo &hubInfo,
+    std::shared_ptr<IEndpointCommunication> *communication) {
+  return callIfConnected([&](const std::shared_ptr<IContextHub> &hub) {
+    return hub->registerEndpointHub(callback, hubInfo, communication);
+  });
 }
 
 HalClient::~HalClient() {

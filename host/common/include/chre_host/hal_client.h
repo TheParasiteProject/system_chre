@@ -40,9 +40,12 @@ using aidl::android::hardware::contexthub::BnContextHubCallback;
 using aidl::android::hardware::contexthub::ContextHubInfo;
 using aidl::android::hardware::contexthub::ContextHubMessage;
 using aidl::android::hardware::contexthub::HostEndpointInfo;
+using aidl::android::hardware::contexthub::HubInfo;
 using aidl::android::hardware::contexthub::IContextHub;
 using aidl::android::hardware::contexthub::IContextHubCallback;
 using aidl::android::hardware::contexthub::IContextHubDefault;
+using aidl::android::hardware::contexthub::IEndpointCallback;
+using aidl::android::hardware::contexthub::IEndpointCommunication;
 using aidl::android::hardware::contexthub::MessageDeliveryStatus;
 using aidl::android::hardware::contexthub::NanoappBinary;
 using aidl::android::hardware::contexthub::NanoappInfo;
@@ -97,15 +100,6 @@ class HalClient {
       const std::shared_ptr<IContextHubCallback> &callback,
       int32_t contextHubId = kDefaultContextHubId);
 
-  /**
-   * Returns true if the multiclient HAL is available.
-   *
-   * <p>Multicleint HAL may not be available on a device that has CHRE enabled.
-   * In this situation, clients are expected to still use SocketClient to
-   * communicate with CHRE.
-   */
-  static bool isServiceAvailable();
-
   /** Returns true if this HalClient instance is connected to the HAL. */
   bool isConnected() {
     return mIsHalConnected;
@@ -118,7 +112,7 @@ class HalClient {
 
   /** Connects to CHRE HAL in background. */
   void connectInBackground(BackgroundConnectionCallback &callback) {
-    std::lock_guard<std::mutex> lock(mBackgroundConnectionFuturesLock);
+    std::lock_guard lock(mBackgroundConnectionFuturesLock);
     // Policy std::launch::async is required to avoid lazy evaluation which can
     // postpone the execution until get() of the future returned by std::async
     // is called.
@@ -142,6 +136,12 @@ class HalClient {
 
   /** Disconnects a host endpoint from CHRE. */
   ScopedAStatus disconnectEndpoint(char16_t hostEndpointId);
+
+  /** Registers a new hub for endpoint communication. */
+  ScopedAStatus registerEndpointHub(
+      const std::shared_ptr<IEndpointCallback> &callback,
+      const HubInfo &hubInfo,
+      std::shared_ptr<IEndpointCommunication> *communication);
 
  protected:
   class HalClientCallback : public BnContextHubCallback {
