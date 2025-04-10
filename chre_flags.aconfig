@@ -103,16 +103,6 @@ flag {
 }
 
 flag {
-  name: "efw_xport_rewind_on_error"
-  namespace: "context_hub"
-  description: "Flag guarding the AOC-dependent behavior to rewind to the last good message"
-  bug: "371057943"
-  metadata {
-    purpose: PURPOSE_BUGFIX
-  }
-}
-
-flag {
   name: "efw_xport_in_context_hub"
   namespace: "context_hub"
   description: "Flag guarding the use of the new EFW transport for ContextHub <-> CHRE comms"
