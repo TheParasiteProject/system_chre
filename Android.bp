@@ -94,8 +94,8 @@ cc_defaults {
         "system/chre/host/common/include/",
         "system/chre/host/hal_generic/aidl/",
         "system/chre/host/hal_generic/common/",
-        "system/chre/platform/shared/include/",
         "system/chre/platform/shared/fbs/include",
+        "system/chre/platform/shared/include/",
         "system/chre/util/include/",
     ],
     header_libs: [
@@ -138,8 +138,8 @@ cc_library_static {
     ],
     export_include_dirs: [
         "host/common/include",
-        "platform/shared/include",
         "platform/shared/fbs/include",
+        "platform/shared/include",
         "util/include",
     ],
     srcs: [
@@ -156,7 +156,7 @@ cc_library_static {
     header_libs: ["chre_flatbuffers"],
     export_header_lib_headers: ["chre_flatbuffers"],
     shared_libs: [
-        "android.hardware.contexthub-V3-ndk",
+        "android.hardware.contexthub-V4-ndk",
         "libaconfig_storage_read_api_cc",
         "libbase",
         "libbinder_ndk",
@@ -304,8 +304,8 @@ cc_binary {
     name: "chre_power_test_client",
     vendor: true,
     local_include_dirs: [
-        "apps/power_test/common/include",
         "apps/power_test/common/generated/include",
+        "apps/power_test/common/include",
         "chre_api/include/chre_api",
         "util/include",
     ],
@@ -327,38 +327,6 @@ cc_binary {
 filegroup {
     name: "st_hal_lpma_handler",
     srcs: ["host/common/st_hal_lpma_handler.cc"],
-}
-
-cc_binary {
-    name: "chre_aidl_hal_client",
-    vendor: true,
-    cpp_std: "c++20",
-    local_include_dirs: [
-        "chre_api/include",
-        "host/common/include",
-    ],
-    srcs: [
-        "host/common/chre_aidl_hal_client.cc",
-        "host/common/file_stream.cc",
-        "host/common/log.cc",
-    ],
-    shared_libs: [
-        "android.hardware.contexthub-V3-ndk",
-        "libbase",
-        "libbinder_ndk",
-        "libjsoncpp",
-        "liblog",
-        "libutils",
-    ],
-    static_libs: [
-        "chre_client",
-    ],
-    cflags: [
-        "-DLOG_TAG=\"CHRE.HAL.CLIENT\"",
-        "-Wall",
-        "-Werror",
-        "-fexceptions",
-    ],
 }
 
 cc_test {
@@ -601,8 +569,8 @@ cc_test_host {
         "host/hal_generic/common/",
         "platform/android/include",
         "platform/include",
-        "platform/shared/include/",
         "platform/shared/fbs/include",
+        "platform/shared/include/",
         "util/include/",
     ],
     static_libs: [
@@ -746,8 +714,8 @@ cc_library_static {
     export_include_dirs: [
         "platform/include",
         "platform/linux/include",
-        "platform/shared/include",
         "platform/shared/fbs/include",
+        "platform/shared/include",
         "util/include",
     ],
     header_libs: [
@@ -790,8 +758,8 @@ cc_test_host {
         "pal/util/include",
         "platform/include",
         "platform/linux/include",
-        "platform/shared/include",
         "platform/shared/fbs/include",
+        "platform/shared/include",
         "platform/shared/pw_trace/include",
         "util/include",
     ],
@@ -1081,8 +1049,8 @@ cc_library_static {
         "platform/include",
         "platform/linux/include",
         "platform/shared/audio_pal/include",
-        "platform/shared/include",
         "platform/shared/fbs/include",
+        "platform/shared/include",
         "platform/shared/public_platform_ble_pal",
         "platform/shared/public_platform_debug_dump_manager",
         "platform/shared/public_platform_gnss_pal",
@@ -1151,8 +1119,8 @@ cc_defaults {
     local_include_dirs: [
         "external/flatbuffers/include",
         "host/common/include",
-        "platform/shared/include",
         "platform/shared/fbs/include",
+        "platform/shared/include",
         "util/include",
     ],
     srcs: [
