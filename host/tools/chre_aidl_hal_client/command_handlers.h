@@ -55,7 +55,10 @@ void halClientConnectEndpoint(HalClient *halClient,
                               const std::string &hexEndpointId);
 void halClientDisconnectEndpoint(HalClient *halClient,
                                  const std::string &hexEndpointId);
+void halClientGetEndpoints(HalClient *halClient);
+void halClientGetHubs(HalClient *halClient);
 void halClientQuery(HalClient *halClient);
+void halClientRegisterHub(HalClient *halClient);
 void halClientSendMessage(HalClient *halClient,
                           const std::vector<std::string> &cmdLine);
 
@@ -290,6 +293,39 @@ const std::vector<CommandInfo<HalClientCommandFunction>> kHalClientCommands{
     },
 
     {
+        .cmd = "exit",
+        .numOfArgs = 0,
+        .argsFormat = "",
+        .usage = "Quit the connection mode.",
+        .func = [](HalClient * /*halClient*/,
+                   const std::vector<std::string> & /*cmdLine*/) { exit(0); },
+    },
+
+    {
+        .cmd = "getHubs",
+        .numOfArgs = 0,
+        .argsFormat = "",
+        .usage = "get all the hubs for session-based messaging.",
+        .func =
+            [](HalClient *halClient,
+               const std::vector<std::string> & /*cmdLine*/) {
+              halClientGetHubs(halClient);
+            },
+    },
+
+    {
+        .cmd = "getEndpoints",
+        .numOfArgs = 0,
+        .argsFormat = "",
+        .usage = "get all the endpoints used for session-based messaging.",
+        .func =
+            [](HalClient *halClient,
+               const std::vector<std::string> & /*cmdLine*/) {
+              halClientGetEndpoints(halClient);
+            },
+    },
+
+    {
         .cmd = "query",
         .numOfArgs = 0,
         .argsFormat = "",
@@ -298,6 +334,18 @@ const std::vector<CommandInfo<HalClientCommandFunction>> kHalClientCommands{
             [](HalClient *halClient,
                const std::vector<std::string> & /*cmdLine*/) {
               halClientQuery(halClient);
+            },
+    },
+
+    {
+        .cmd = "registerHub",
+        .numOfArgs = 0,
+        .argsFormat = "",
+        .usage = "register a hub using id and name.",
+        .func =
+            [](HalClient *halClient,
+               const std::vector<std::string> & /*cmdLine*/) {
+              halClientRegisterHub(halClient);
             },
     },
 
@@ -312,15 +360,6 @@ const std::vector<CommandInfo<HalClientCommandFunction>> kHalClientCommands{
             [](HalClient *halClient, const std::vector<std::string> &cmdLine) {
               halClientSendMessage(halClient, cmdLine);
             },
-    },
-
-    {
-        .cmd = "exit",
-        .numOfArgs = 0,
-        .argsFormat = "",
-        .usage = "Quit the connection mode.",
-        .func = [](HalClient * /*halClient*/,
-                   const std::vector<std::string> & /*cmdLine*/) { exit(0); },
     },
 };
 

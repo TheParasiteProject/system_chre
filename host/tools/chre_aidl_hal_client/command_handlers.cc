@@ -34,6 +34,7 @@
 #include "chre_host/hal_client.h"
 #include "chre_host/log.h"
 #include "chre_host/napp_header.h"
+#include "endpoint_callback.h"
 
 namespace android::chre::chre_aidl_hal_client {
 
@@ -57,6 +58,10 @@ using ndk::ScopedAStatus;
 
 std::shared_ptr<IContextHub> gContextHub = nullptr;
 std::shared_ptr<ContextHubCallback> gCallback = nullptr;
+
+// Session based messaging related variables.
+std::shared_ptr<IEndpointCallback> gEndpointCallback = nullptr;
+std::shared_ptr<IEndpointCommunication> gCommunication = nullptr;
 
 void registerHostCallback() {
   if (gCallback != nullptr) {
@@ -132,49 +137,7 @@ void getAllEndpoints() {
               << std::endl;
     return;
   }
-
-  if (endpoints.empty()) {
-    std::cout << "No endpoints found" << std::endl;
-    return;
-  }
-  std::cout << "Found " << endpoints.size() << " endpoint(s):" << std::endl;
-  for (const auto &[endpoint, type, name, version, tag, requiredPermissions,
-                    services] : endpoints) {
-    const std::string versionString =
-        type == EndpointInfo::EndpointType::NANOAPP
-            ? NanoappHelper::parseAppVersion(version)
-            : std::to_string(version);
-    std::cout << "----------------------------------------" << std::endl;
-    std::cout << "  Hub ID:      0x" << std::hex << endpoint.hubId << std::endl;
-    std::cout << "  Endpoint ID: 0x" << std::hex << endpoint.id << std::dec
-              << std::endl;
-    std::cout << "  Name:        " << name << std::endl;
-    std::cout << "  Type:        " << toString(type) << std::endl;
-    std::cout << "  Version:     " << versionString << std::endl;
-    std::cout << "  Tag:         " << (tag.has_value() ? tag.value() : "<none>")
-              << std::endl;
-
-    std::cout << "  Permissions: ";
-    if (requiredPermissions.empty()) {
-      std::cout << "<none>" << std::endl;
-    } else {
-      std::cout << std::endl;
-      for (const auto &perm : requiredPermissions) {
-        std::cout << "    - " << perm << std::endl;
-      }
-    }
-
-    std::cout << "  Services:    ";
-    if (services.empty()) {
-      std::cout << "<none>" << std::endl;
-    } else {
-      std::cout << std::endl;
-      for (const auto &service : services) {
-        std::cout << "    - " << service.toString() << std::endl;
-      }
-    }
-  }
-  std::cout << "----------------------------------------" << std::endl;
+  EndpointHelper::printEndpoints(endpoints);
 }
 
 void getAllContextHubs() {
@@ -379,6 +342,27 @@ void halClientDisconnectEndpoint(HalClient *halClient,
                halClient->disconnectEndpoint(hostEndpointId));
 }
 
+void halClientGetEndpoints(HalClient *halClient) {
+  std::vector<EndpointInfo> endpoints{};
+  verifyStatus(/* operation= */ "get session-based endpoints",
+               halClient->getEndpoints(&endpoints));
+  EndpointHelper::printEndpoints(endpoints);
+}
+
+void halClientGetHubs(HalClient *halClient) {
+  std::vector<HubInfo> hubs{};
+  verifyStatus(/*operation= */ "Get session-based hubs",
+               halClient->getHubs(&hubs));
+  if (hubs.empty()) {
+    std::cerr << "No hubs found" << std::endl;
+    return;
+  }
+  for (const auto &[hubId, hubDetails] : hubs) {
+    std::cout << "Hub id: 0x" << std::hex << hubId << " "
+              << hubDetails.toString() << std::endl;
+  }
+}
+
 void halClientQuery(HalClient *halClient) {
   verifyStatusAndSignal(/* operation= */ "querying nanoapps",
                         halClient->queryNanoapps(),
@@ -394,6 +378,13 @@ void halClientSendMessage(HalClient *halClient,
   verifyStatusAndSignal(
       /* operation= */ "sending a message to " + cmdLine[2],
       halClient->sendMessage(message), gCallback->promise.get_future());
+}
+
+void halClientRegisterHub(HalClient *halClient) {
+  gEndpointCallback = EndpointCallback::make<EndpointCallback>();
+  verifyStatus(/* operation= */ "register an endpoint hub",
+               halClient->registerEndpointHub(gEndpointCallback, kHubInfo,
+                                              &gCommunication));
 }
 
 std::vector<std::string> CommandHelper::getCommandLine() {
