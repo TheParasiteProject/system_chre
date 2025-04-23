@@ -315,7 +315,7 @@ bool NanoappLoader::MemoryMapping::construct(const ProgramHeader *first,
         static_cast<uint8_t *>(nanoappBinaryDramAlloc(mMemorySpan, alignment));
   }
   if (mAddr == nullptr) {
-    LOG_OOM();
+    LOGE("Failed to allocate memory for nanoapp of size %zu", mMemorySpan);
     return false;
   }
 
