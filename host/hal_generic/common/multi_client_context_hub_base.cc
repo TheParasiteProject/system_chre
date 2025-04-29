@@ -1030,7 +1030,7 @@ void MultiClientContextHubBase::handleClientDeath(pid_t clientPid) {
 
 void MultiClientContextHubBase::onChreDisconnected() {
   mIsChreReady = false;
-  LOGW("HAL APIs will be failed because CHRE is disconnected");
+  LOGW("HAL APIs will fail because CHRE is disconnected");
   if (mV4Impl) {
     mV4Impl->onChreDisconnected();
   }
