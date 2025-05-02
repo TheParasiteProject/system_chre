@@ -130,8 +130,8 @@ class PlatformNanoappBase {
   //! Pointer to the app info structure within this nanoapp
   const struct chreNslNanoappInfo *mAppInfo = nullptr;
 
-  //! Pointer containing the unstable ID section for this nanoapp
-  const char *mAppUnstableId = nullptr;
+  //! Pointer containing the app version string for this nanoapp
+  const char *mAppVersionString = nullptr;
 
   //! Set to true if this app is built into the CHRE binary, and was loaded via
   //! loadStatic(). In this case, the member variables above are not valid or
