@@ -1107,6 +1107,8 @@ cc_defaults {
         "-DGTEST",
         "-Wextra-semi",
         "-Wvla-extension",
+        "-Wall",
+        "-Werror",
     ],
 }
 
