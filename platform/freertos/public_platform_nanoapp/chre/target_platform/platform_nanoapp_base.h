@@ -117,6 +117,8 @@ class PlatformNanoappBase {
   //! Buffer containing the complete DSO binary - only populated if
   //! copyNanoappFragment() was used to load this nanoapp
   void *mAppBinary = nullptr;
+  //! The raw buffer allocated, used to guarantee the alignment requirements
+  void *mAppBinaryAllocatedMemory = nullptr;
   size_t mAppBinaryLen = 0;
 
   //! Null-terminated ASCII string containing the file name that contains the
