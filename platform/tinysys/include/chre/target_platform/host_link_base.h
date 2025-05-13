@@ -20,6 +20,7 @@
 #include <cstddef>
 
 #include "chre/platform/atomic.h"
+#include "chre/platform/condition_variable.h"
 #include "chre/platform/shared/host_protocol_chre.h"
 
 namespace chre {
@@ -75,14 +76,6 @@ class HostLinkBase {
                                            uint32_t tokenDatabaseOffset,
                                            size_t tokenDatabaseSize);
 
-  void setInitialized(bool initialized) {
-    mInitialized = initialized;
-  }
-
-  [[nodiscard]] bool isInitialized() const {
-    return mInitialized;
-  }
-
   /**
    * Sends a request to the host for a time sync message.
    */
@@ -106,7 +99,11 @@ class HostLinkBase {
    */
   void sendNanConfiguration(bool enable);
 
+  void waitIfHostLinkIsNotInitialized();
+
  private:
+  Mutex mInitMutex;
+  ConditionVariable mInitCv;
   AtomicBool mInitialized = false;
 };
 

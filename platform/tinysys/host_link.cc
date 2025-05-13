@@ -456,8 +456,24 @@ DRAM_REGION_FUNCTION void HostLinkBase::vChreReceiveTask(void *pvParameters) {
   }
 }
 
-DRAM_REGION_FUNCTION void HostLinkBase::vChreSendTask(void * /*pvParameters*/) {
+DRAM_REGION_FUNCTION void HostLinkBase::waitIfHostLinkIsNotInitialized() {
+  if (mInitialized) {
+    return;
+  }
+
+  LockGuard lock(mInitMutex);
+  while (!mInitialized) {
+    mInitCv.wait(mInitMutex);
+  }
+
+  LOGD("%zu messaged queued while waiting for host link to get ready",
+       gOutboundQueue.size());
+}
+
+DRAM_REGION_FUNCTION void HostLinkBase::vChreSendTask(void *pvParameters) {
+  auto hostLink = static_cast<HostLinkBase *>(pvParameters);
   while (true) {
+    hostLink->waitIfHostLinkIsNotInitialized();
     const auto msg = gOutboundQueue.pop();
     dequeueMessage(msg);
   }
@@ -548,7 +564,7 @@ DRAM_REGION_FUNCTION void HostLinkBase::initializeIpi() {
     LOGE("%s failed to create ipi receiver task", __func__);
   } else if (pdPASS !=
              xTaskCreate(vChreSendTask, "CHRE_SEND", kBackgroundTaskStackSize,
-                         /* pvParameters= */ nullptr, kBackgroundTaskPriority,
+                         /* pvParameters= */ this, kBackgroundTaskPriority,
                          /* pxCreatedTask= */ nullptr)) {
     LOGE("%s failed to create ipi outbound message queue task", __func__);
   } else if (IPI_ACTION_DONE !=
@@ -576,11 +592,10 @@ DRAM_REGION_FUNCTION void HostLinkBase::receive(HostLinkBase *instance,
                                                 void *message,
                                                 size_t messageLen) {
   LOGV("%s: message len %zu", __func__, messageLen);
-
-  // TODO(b/277128368): A crude way to initially determine daemon's up - set
-  // a flag on the first message received. This is temporary until a better
-  // way to do this is available.
-  instance->setInitialized(true);
+  if (!instance->mInitialized) {
+    instance->mInitialized = true;
+    instance->mInitCv.notify_one();
+  }
 
   if (!HostProtocolChre::decodeMessageFromHost(message, messageLen)) {
     LOGE("Failed to decode msg %p of len %zu", message, messageLen);
@@ -687,19 +702,16 @@ DRAM_REGION_FUNCTION void HostLinkBase::sendLogMessageV2(
   LogMessageData logMessageData{logMessage, logMessageSize, numLogsDropped};
 
   auto msgBuilder = [](ChreFlatBufferBuilder &builder, void *cookie) {
-    const auto *data = static_cast<const LogMessageData *>(cookie);
+    const auto data = static_cast<const LogMessageData *>(cookie);
     HostProtocolChre::encodeLogMessagesV2(
         builder, data->logMsg, data->logMsgSize, data->numLogsDropped);
   };
 
   constexpr size_t kInitialSize = 128;
-  bool result = false;
-  if (isInitialized()) {
-    result = buildAndEnqueueMessage(
-        PendingMessageType::EncodedLogMessage,
-        kInitialSize + logMessageSize + sizeof(numLogsDropped), msgBuilder,
-        &logMessageData);
-  }
+  bool result = buildAndEnqueueMessage(
+      PendingMessageType::EncodedLogMessage,
+      kInitialSize + logMessageSize + sizeof(numLogsDropped), msgBuilder,
+      &logMessageData);
 
 #ifdef CHRE_USE_BUFFERED_LOGGING
   if (LogBufferManagerSingleton::isInitialized()) {
@@ -712,14 +724,7 @@ DRAM_REGION_FUNCTION void HostLinkBase::sendLogMessageV2(
 
 DRAM_REGION_FUNCTION bool HostLink::sendMessage(HostMessage const *message) {
   LOGV("HostLink::%s size(%zu)", __func__, message->message.size());
-  bool success = false;
-
-  if (isInitialized()) {
-    success = enqueueMessage(PendingMessage::createFromMessageToHost(message));
-  } else {
-    LOGW("Dropping outbound message: host link not initialized yet");
-  }
-  return success;
+  return enqueueMessage(PendingMessage::createFromMessageToHost(message));
 }
 
 DRAM_REGION_FUNCTION bool HostLink::sendMessageDeliveryStatus(
