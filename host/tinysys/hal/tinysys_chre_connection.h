@@ -52,6 +52,9 @@ class TinysysChreConnection : public ChreConnection {
     if (mMessageListener.joinable()) {
       mMessageListener.join();
     }
+    if (mMessageHandler.joinable()) {
+      mMessageHandler.join();
+    }
     if (mMessageSender.joinable()) {
       mMessageSender.join();
     }
@@ -106,9 +109,6 @@ class TinysysChreConnection : public ChreConnection {
   // The path to CHRE file descriptor
   static constexpr char kChreFileDescriptorPath[] = "/dev/scp_chre_manager";
 
-  // Max queue size for sending messages to CHRE
-  static constexpr size_t kMaxSynchronousMessageQueueSize = 64;
-
   // Wrapper for a message sent to CHRE
   struct MessageToChre {
     // This magic number is the SCP_CHRE_MAGIC constant defined by kernel
@@ -129,14 +129,28 @@ class TinysysChreConnection : public ChreConnection {
     }
   };
 
+  // Wrapper for a message from CHRE
+  struct MessageFromChre {
+    std::unique_ptr<uint8_t[]> buffer;
+    size_t size;
+
+    MessageFromChre(void *data, ssize_t length) {
+      buffer = std::make_unique<uint8_t[]>(length);
+      memcpy(buffer.get(), data, length);
+      size = length;
+    }
+  };
+
   // A queue suitable for multiple producers and a single consumer.
   template <typename ElementType>
   class SynchronousMessageQueue {
    public:
+    explicit SynchronousMessageQueue(size_t capacity) : mCapacity(capacity) {}
+
     bool emplace(void *data, size_t length) {
       std::unique_lock lock(mMutex);
-      if (mQueue.size() >= kMaxSynchronousMessageQueueSize) {
-        LOGE("Message queue from HAL to CHRE is full!");
+      if (mQueue.size() >= mCapacity) {
+        LOGE("Message queue is full!");
         return false;
       }
       mQueue.emplace(data, length);
@@ -159,7 +173,12 @@ class TinysysChreConnection : public ChreConnection {
       mCv.wait(lock, [&] { return !mQueue.empty(); });
     }
 
+    size_t size() {
+      return mQueue.size();
+    }
+
    private:
+    const size_t mCapacity;
     std::mutex mMutex;
     std::condition_variable mCv;
     std::queue<ElementType> mQueue;
@@ -167,6 +186,10 @@ class TinysysChreConnection : public ChreConnection {
 
   // The task receiving message from CHRE
   [[noreturn]] static void messageListenerTask(
+      TinysysChreConnection *chreConnection);
+
+  // The task handling message from CHRE
+  [[noreturn]] static void messageHandlerTask(
       TinysysChreConnection *chreConnection);
 
   // The task sending message to CHRE
@@ -189,6 +212,8 @@ class TinysysChreConnection : public ChreConnection {
 
   // the message listener thread that receives messages from CHRE
   std::thread mMessageListener;
+  // the message handling thread that handles messages from CHRE
+  std::thread mMessageHandler;
   // the message sender thread that sends messages to CHRE
   std::thread mMessageSender;
   // the status listener thread that hosts chreStateMonitorTask
@@ -200,8 +225,10 @@ class TinysysChreConnection : public ChreConnection {
   // The LPMA handler to talk to the ST HAL
   StHalLpmaHandler mLpmaHandler;
 
-  // For messages sent to CHRE
-  SynchronousMessageQueue<MessageToChre> mSendingQueue;
+  // Queues for sending to and receiving messages from CHRE, with heuristic
+  // capacity size.
+  SynchronousMessageQueue<MessageToChre> mSendingQueue{/* capacity= */ 64};
+  SynchronousMessageQueue<MessageFromChre> mReceivingQueue{/* capacity= */ 256};
 
   // Mutex and CV are used to get PulseResponse from CHRE synchronously.
   std::mutex mChrePulseMutex;

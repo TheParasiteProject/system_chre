@@ -82,8 +82,10 @@ bool TinysysChreConnection::init() {
   }
   // launch the tasks
   mMessageListener = std::thread(messageListenerTask, this);
+  mMessageHandler = std::thread(messageHandlerTask, this);
   mMessageSender = std::thread(messageSenderTask, this);
   mStateListener = std::thread(chreStateMonitorTask, this);
+
   mLpmaHandler.init();
   return true;
 }
@@ -107,9 +109,20 @@ bool TinysysChreConnection::init() {
              payloadSize, errno);
         continue;
       }
-      handleMessageFromChre(chreConnection, chreConnection->mPayload.get(),
-                            payloadSize);
+      chreConnection->mReceivingQueue.emplace(chreConnection->mPayload.get(),
+                                              payloadSize);
     }
+  }
+}
+
+void TinysysChreConnection::messageHandlerTask(
+    TinysysChreConnection *chreConnection) {
+  while (true) {
+    chreConnection->mReceivingQueue.waitForMessage();
+    MessageFromChre &message = chreConnection->mReceivingQueue.front();
+    chreConnection->mCallback->handleMessageFromChre(message.buffer.get(),
+                                                     message.size);
+    chreConnection->mReceivingQueue.pop();
   }
 }
 
