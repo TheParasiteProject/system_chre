@@ -23,13 +23,28 @@
 
 namespace chre {
 
+/** Base class for platform-specific nanoapp memory protection. */
 class NanoappMemoryGuardBase : public NonCopyable {
  public:
-  explicit NanoappMemoryGuardBase(const PlatformNanoapp & /*nanoapp*/) {}
-  NanoappMemoryGuardBase(
-      const NanoappLoader::LoadableSegment * /*loadable_segment*/,
-      size_t /*size*/) {}
-  ~NanoappMemoryGuardBase() = default;
+  explicit NanoappMemoryGuardBase(const PlatformNanoapp &nanoapp);
+
+  NanoappMemoryGuardBase(const NanoappLoader::LoadableSegment *loadableSegments,
+                         size_t numSegments);
+
+  virtual ~NanoappMemoryGuardBase();
+
+ private:
+  /**
+   * Applies permissions to the nanoapp's memory segments based on the
+   * permission settings in NanoappLoader::LoadableSegment.
+   */
+  void grantMemoryPermissions() const;
+
+  /** Removes the permissions applied to the nanoapp's memory segments. */
+  void revokeMemoryPermissions() const;
+
+  const NanoappLoader::LoadableSegment *mLoadableSegments = nullptr;
+  size_t mNumSegments = 0;
 };
 }  // namespace chre
 #endif  // CHRE_PLATFORM_NANOAPP_MEMORY_GUARD_BASE_H_
