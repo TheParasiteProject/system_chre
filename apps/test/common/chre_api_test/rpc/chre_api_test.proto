@@ -72,6 +72,14 @@ service ChreApiTestService {
 
   // Returns events that match the eventType filter
   rpc GatherEvents(GatherEventsInput) returns (stream GeneralEventsMessage) {}
+
+  /* Reads the RSSI of a BLE device synchronously.
+   * This will wait for the event and will return success and
+   * if the event is seen. This will return the connection handle,
+   * RSSI value, and event's success field.
+   */
+  rpc ChreBleReadRssiSync(ChreBleReadRssiRequest)
+      returns (stream ChreBleReadRssiEvent) {}
 }
 
 // General messages
@@ -382,4 +390,16 @@ message ChreBleStartScanAsyncInput {
 
 message ChreBleBroadcasterAddressFilter {
   bytes broadcasterAddress = 1;
+}
+
+// Input value for ChreBleReadRssi
+message ChreBleReadRssiRequest {
+  uint32 connectionHandle = 1;
+}
+
+// Return value for ChreBleReadRssiRequest
+message ChreBleReadRssiEvent {
+  uint32 connectionHandle = 1;
+  int32 rssi = 2;
+  bool status = 3;
 }

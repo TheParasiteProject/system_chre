@@ -16,6 +16,9 @@
 
 package com.google.android.chre.test.chqts.multidevice;
 
+import static com.google.common.truth.Truth.assertThat;
+
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.hardware.location.NanoAppBinary;
@@ -475,5 +478,23 @@ public class ContextHubMultiDeviceBleBeaconTestExecutor extends ContextHubBleTes
                     gatherAndVerifyChreBleAdvertisementsFromBroadcaster(expectedMacAddress);
         return verifyBleAdvertisementsMatch(androidResult, chreResult);
 
+    }
+
+    /**
+     * Starts Android/CHRE BLE event verification for Broadcaster Address advertise with no data
+     */
+    public void makeBtConnectionAndReadRssiFromChre(String expectedMacAddress) throws Exception {
+        BluetoothDevice device = connect(expectedMacAddress);
+        if (device == null) {
+            Log.e(TAG, "Connection failed: devices is null");
+            return;
+        }
+        int connectionHandle = device.getConnectionHandle(BluetoothDevice.TRANSPORT_LE);
+        if (connectionHandle <= 0) {
+            Log.e(TAG, "Invalid connection handle received from device");
+            return;
+        }
+        boolean success = sendReadRssiMessageToChre(connectionHandle);
+        assertThat(success).isTrue();
     }
 }
