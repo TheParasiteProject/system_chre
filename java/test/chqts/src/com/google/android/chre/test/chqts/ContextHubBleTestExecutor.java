@@ -156,8 +156,8 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
 
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
-            if (result == null) {
-                Log.w(TAG, "Received null scan result.");
+            if (result == null || result.getDevice() == null) {
+                Log.w(TAG, "ScanResult or device was null");
                 return;
             }
             synchronized (mScanResults) {
@@ -278,6 +278,36 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
     }
 
     /**
+     * Generates a Filter that only known Broadcaster Address
+     */
+    public static ChreApiTest.ChreBleScanFilter getBroadcasterAddressFilter(String macAddress) {
+        byte[] macBytes = parseMacStringToBytes(macAddress);
+
+        ChreApiTest.ChreBleBroadcasterAddressFilter broadcasterAddressFilter =
+                ChreApiTest.ChreBleBroadcasterAddressFilter.newBuilder()
+                        .setBroadcasterAddress(ByteString.copyFrom(macBytes))
+                        .build();
+
+        ChreApiTest.ChreBleScanFilter.Builder builder =
+                ChreApiTest.ChreBleScanFilter.newBuilder()
+                        .setRssiThreshold(RSSI_THRESHOLD)
+                        .addBroadcasterAddressFilters(broadcasterAddressFilter);
+        return builder.build();
+    }
+
+    /**
+     * Parses the Mac String to Bytes
+     */
+    public static byte[] parseMacStringToBytes(String mac) {
+        String[] parts = mac.split(":");
+        byte[] macBytes = new byte[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            macBytes[i] = (byte) Integer.parseInt(parts[i], 16);
+        }
+        return macBytes;
+    }
+
+    /**
      * Generates a BLE scan filter that filters only for the known Google beacons:
      * Google Eddystone and Nearby Fastpair.
      */
@@ -357,6 +387,17 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
     }
 
     /**
+     * Generates a BLE scan filter that filters only for the known broadcaster MAC address
+     */
+    public List<ScanFilter> getBroadcastAddressFilterHost(String macAddress) {
+        ScanFilter scanFilter = new ScanFilter.Builder()
+                .setDeviceAddress(macAddress)
+                .build();
+
+        return ImmutableList.of(scanFilter);
+    }
+
+    /**
      * Starts a BLE scan and asserts it was started successfully in a synchronous manner.
      * This waits for the event to be received and returns the status in the event.
      *
@@ -367,7 +408,7 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
                 ChreApiTest.ChreBleStartScanAsyncInput.newBuilder()
                         .setMode(ChreApiTest.ChreBleScanMode.CHRE_BLE_SCAN_MODE_FOREGROUND)
                         .setReportDelayMs(REPORT_DELAY_MS)
-                        .setHasFilter(scanFilter != null);
+                        .setHasFilter(true);
         if (scanFilter != null) {
             inputBuilder.setFilter(scanFilter);
         }
@@ -508,6 +549,34 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
     }
 
     /**
+     * Starts broadcasting BLE advertising with no data
+     */
+    public void startBleAdvertisingWithNoData() throws InterruptedException {
+        if (mIsAdvertising.get()) {
+            return;
+        }
+
+        AdvertisingSetParameters parameters = new AdvertisingSetParameters.Builder()
+                .setLegacyMode(true)
+                .setConnectable(false)
+                .setInterval(AdvertisingSetParameters.INTERVAL_LOW)
+                .setTxPowerLevel(AdvertisingSetParameters.TX_POWER_MEDIUM)
+                .setOwnAddressType(AdvertisingSetParameters.ADDRESS_TYPE_PUBLIC)
+                .build();
+
+        AdvertiseData data = new AdvertiseData.Builder()
+                .setIncludeDeviceName(false)
+                .setIncludeTxPowerLevel(true)
+                .build();
+
+        mBluetoothLeAdvertiser.startAdvertisingSet(parameters, data,
+                 /* ownAddress= */ null, /* periodicParameters= */ null,
+                /* periodicData= */ null, mAdvertisingSetCallback);
+        mAdvertisingStartLatch.await();
+        assertThat(mIsAdvertising.get()).isTrue();
+    }
+
+    /**
      * Starts broadcasting the CHRE test manufacturer Data from the AP.
      */
     public void startBleAdvertisingManufacturer() throws InterruptedException {
@@ -556,5 +625,16 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
                 ((shortUuid & 0xFFFFL) << BIT_INDEX_OF_16_BIT_UUID)
                         | BASE_UUID.getMostSignificantBits(),
                         BASE_UUID.getLeastSignificantBits());
+    }
+
+    /**
+     * Gets the mac address for the device
+     */
+    public String getMacAddress() throws Exception {
+        if (mBluetoothAdapter == null) {
+            Log.e(TAG, "getMacAddress mBluetoothAdapter is equal to null");
+        }
+
+        return mBluetoothAdapter.getAddress();
     }
 }

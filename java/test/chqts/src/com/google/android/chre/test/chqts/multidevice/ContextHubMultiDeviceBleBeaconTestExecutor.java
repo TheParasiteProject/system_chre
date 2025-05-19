@@ -138,6 +138,40 @@ public class ContextHubMultiDeviceBleBeaconTestExecutor extends ContextHubBleTes
     }
 
     /**
+     * Verify that the CHRE advertisment were received from the broadcaster with no data.
+     */
+    public List<ChreApiTest.ChreBleAdvertisingReport>
+                gatherAndVerifyChreBleAdvertisementsFromBroadcaster(String expectedMacAddress)
+                            throws Exception {
+        List<ChreApiTest.ChreBleAdvertisingReport> reports = new ArrayList<>();
+        byte[] broadcasterMac = parseMacStringToBytes(expectedMacAddress);
+
+        for (int i = 0; i < NUM_EVENT_CYCLES_TO_GATHER; i++) {
+            List<ChreApiTest.GeneralEventsMessage> events = gatherChreBleEvents();
+            if (events == null) {
+                Log.w(TAG, "No CHRE BLE events in cycle" + i);
+                continue;
+            }
+            for (ChreApiTest.GeneralEventsMessage event: events) {
+                if (!event.hasChreBleAdvertisementEvent()) {
+                    continue;
+                }
+                ChreApiTest.ChreBleAdvertisementEvent bleAdvertisementEvent =
+                        event.getChreBleAdvertisementEvent();
+                for (int j = 0; j < bleAdvertisementEvent.getReportsCount(); ++j) {
+                    ChreApiTest.ChreBleAdvertisingReport report =
+                            bleAdvertisementEvent.getReports(j);
+                    byte[] reportMac = report.getAddress().toByteArray();
+                    if (Arrays.equals(reportMac, broadcasterMac)) {
+                        reports.add(report);
+                    }
+                }
+            }
+        }
+        return reports;
+    }
+
+    /**
      * Gathers CHRE BLE advertisement events.
      */
     private List<ChreApiTest.GeneralEventsMessage> gatherChreBleEvents() throws Exception {
@@ -168,7 +202,7 @@ public class ContextHubMultiDeviceBleBeaconTestExecutor extends ContextHubBleTes
                     Log.w(TAG, "ScanRecord was null, skipping result: " + result.toString());
                     continue;
                 }
-                byte [] serviceData =
+                byte[] serviceData =
                         record.getServiceData(new ParcelUuid(CHRE_TEST_SERVICE_DATA_UUID));
                 if (serviceData != null) {
                     scanResultsList.add(result);
@@ -189,13 +223,40 @@ public class ContextHubMultiDeviceBleBeaconTestExecutor extends ContextHubBleTes
 
             List<ScanResult> events =
                             gatherAndroidBleEvents(NUM_EVENT_CYCLES_TO_GATHER, TIMEOUT_IN_MS);
-
             for (ScanResult result : events) {
                 ScanRecord record = result.getScanRecord();
                 if (record == null) {
                     continue;
                 }
-                if (record.getManufacturerSpecificData(CHRE_BLE_TEST_MANUFACTURER_ID) != null) {
+                byte[] manufacturerData =
+                        record.getManufacturerSpecificData(CHRE_BLE_TEST_MANUFACTURER_ID);
+                if (manufacturerData != null) {
+                    scanResultsList.add(result);
+                }
+            }
+        }
+        return scanResultsList;
+    }
+
+    /**
+     * Gathers BLE advertisement events received from the Android scan
+     * which match the secondary device's broadcast address
+     */
+    public List<ScanResult>
+                gatherAndVerifyAndroidBleAdvertisementsFromBroadcastAddress(
+                    String expectedMacAddress) throws Exception {
+
+        List<ScanResult> scanResultsList = new ArrayList<>();
+        for (int i = 0; i < NUM_EVENT_CYCLES_TO_GATHER; i++) {
+            List<ScanResult> events =
+                        gatherAndroidBleEvents(NUM_EVENT_CYCLES_TO_GATHER, TIMEOUT_IN_MS);
+            for (ScanResult result : events) {
+                if (result == null) {
+                    continue;
+                }
+                String deviceAddress = result.getDevice().getAddress();
+
+                if (deviceAddress != null && deviceAddress.equalsIgnoreCase(expectedMacAddress)) {
                     scanResultsList.add(result);
                 }
             }
@@ -214,7 +275,7 @@ public class ContextHubMultiDeviceBleBeaconTestExecutor extends ContextHubBleTes
         synchronized (mScanResults) {
             Long nowTime = System.currentTimeMillis();
             while ((nowTime - startTime) < timeoutMillis
-                                                                && gathered.size() < maxEvents) {
+                                            && gathered.size() < maxEvents) {
 
                 while (!mScanResults.isEmpty() && gathered.size() < maxEvents) {
                     ScanResult result = mScanResults.remove(0);
@@ -251,6 +312,14 @@ public class ContextHubMultiDeviceBleBeaconTestExecutor extends ContextHubBleTes
         chreBleStartScanSync(getManufacturerDataScanFilterChre());
     }
 
+    /**
+     * Starts a BLE scan with test Broadcaster Address filter.
+     */
+    public void chreBleStartScanSyncWithBroadcasterAddressFilter(
+                                                String macAddress) throws Exception {
+        chreBleStartScanSync(getBroadcasterAddressFilter(macAddress));
+    }
+
      /**
      *  Starts an Android BLE scan with Service Data filter.
      */
@@ -258,12 +327,19 @@ public class ContextHubMultiDeviceBleBeaconTestExecutor extends ContextHubBleTes
         startBleScanOnHost(getTestServiceDataScanFilterHost());
     }
 
-
      /**
      *  Starts an Android BLE scan with Google Manufacturer filter.
      */
     public void androidBleStartScanSyncWithManufacturerData() throws Exception {
         startBleScanOnHost(getManufacturerDataScanFilterHost());
+    }
+
+     /**
+     *  Starts an Android BLE scan with Broadcast Address filter.
+     */
+    public void androidBleStartScanSyncWithBroadcasterAddressFilter(
+                                                String macAddress) throws Exception {
+        startBleScanOnHost(getBroadcastAddressFilterHost(macAddress));
     }
 
      /**
@@ -345,7 +421,7 @@ public class ContextHubMultiDeviceBleBeaconTestExecutor extends ContextHubBleTes
     /**
      * Formats the address byte code
      */
-    private static String formatMacAddress(ByteString macBytes) {
+    public static String formatMacAddress(ByteString macBytes) {
         byte[] macArray = macBytes.toByteArray();
         StringBuilder macBuilder = new StringBuilder();
         for (int i = 0; i < macArray.length; i++) {
@@ -384,6 +460,20 @@ public class ContextHubMultiDeviceBleBeaconTestExecutor extends ContextHubBleTes
                     gatherAndVerifyChreBleAdvertisementsWithManufacturerData();
 
         return verifyBleAdvertisementsMatch(androidResults, chreResults);
+
+    }
+
+    /**
+     * Starts Android/CHRE BLE event verification for Broadcaster Address advertise with no data
+     */
+    public boolean verifyAndroidAndChreNoDataEventsMatch(String expectedMacAddress)
+                                                                        throws Exception {
+
+        List<ScanResult> androidResult =
+                    gatherAndVerifyAndroidBleAdvertisementsFromBroadcastAddress(expectedMacAddress);
+        List<ChreApiTest.ChreBleAdvertisingReport> chreResult =
+                    gatherAndVerifyChreBleAdvertisementsFromBroadcaster(expectedMacAddress);
+        return verifyBleAdvertisementsMatch(androidResult, chreResult);
 
     }
 }
