@@ -60,22 +60,6 @@ const char *strdupDram(const char *source) {
   return strdup(source, dramAllocator);
 }
 
-// TODO(b/417791623) - This is a temperory solution and should be updated once
-//  we have memoryAlignedAlloc ready for use.
-template <typename T>
-T roundUpToNanoappLoadAlignment(T size) {
-  if (CHRE_NANOAPP_LOAD_ALIGNMENT == 0 || CHRE_NANOAPP_LOAD_ALIGNMENT == 1) {
-    return size;
-  }
-
-  static_assert(
-      (CHRE_NANOAPP_LOAD_ALIGNMENT & (CHRE_NANOAPP_LOAD_ALIGNMENT - 1)) == 0,
-      "CHRE_NANOAPP_LOAD_ALIGNMENT must be a power of 2");
-
-  return (size + CHRE_NANOAPP_LOAD_ALIGNMENT - 1) &
-         ~(CHRE_NANOAPP_LOAD_ALIGNMENT - 1);
-}
-
 void cleanUpAppInfo(const chreNslNanoappInfo *appInfo) {
   if (appInfo == nullptr) {
     return;
@@ -145,7 +129,7 @@ PlatformNanoapp::~PlatformNanoapp() {
 
   if (mAppBinary != nullptr) {
     forceDramAccess();
-    memoryFreeDram(mAppBinaryAllocatedMemory);
+    nanoappBinaryDramFree(mAppBinary);
   }
 }
 
@@ -302,10 +286,8 @@ bool PlatformNanoappBase::reserveBuffer(uint64_t appId, uint32_t appVersion,
   forceDramAccess();
 
   bool success = false;
-  mAppBinaryAllocatedMemory = memoryAllocDram(roundUpToNanoappLoadAlignment(
-      CHRE_NANOAPP_LOAD_ALIGNMENT - 1 + appBinaryLen));
-  mAppBinary = reinterpret_cast<void *>(roundUpToNanoappLoadAlignment(
-      reinterpret_cast<uintptr_t>(mAppBinaryAllocatedMemory)));
+  mAppBinary =
+      nanoappBinaryDramAlloc(appBinaryLen, CHRE_NANOAPP_LOAD_ALIGNMENT);
 
   bool isSigned = IS_BIT_SET(appFlags, CHRE_NAPP_HEADER_SIGNED);
   if (!isSigned) {
@@ -420,9 +402,8 @@ bool PlatformNanoappBase::openNanoapp() {
   }
 
   if (mAppBinary != nullptr) {
-    memoryFreeDram(mAppBinaryAllocatedMemory);
+    nanoappBinaryDramFree(mAppBinary);
     mAppBinary = nullptr;
-    mAppBinaryAllocatedMemory = nullptr;
   }
 
   // Save this flag locally since it may be referenced while the system is in
