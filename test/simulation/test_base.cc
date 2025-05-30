@@ -20,9 +20,9 @@
 #include <pw_containers/vector.h>
 
 #include "chre/core/event_loop_manager.h"
-#include "chre/core/init.h"
 #include "chre/platform/linux/platform_log.h"
 #include "chre/platform/linux/task_util/task_manager.h"
+#include "chre/platform/shared/init.h"
 #include "chre/util/system/message_router.h"
 #include "chre/util/time.h"
 #include "chre_api/chre/version.h"
@@ -65,7 +65,7 @@ void TestBase::SetUp() {
   chre::PlatformLogSingleton::init();
   TaskManagerSingleton::init();
   TestEventQueueSingleton::init();
-  chre::init();
+  chre::initCommon();
   EventLoopManagerSingleton::get()->lateInit();
 
   mChreThread = std::thread(
@@ -89,7 +89,7 @@ void TestBase::TearDown() {
   EventLoopManagerSingleton::get()->getEventLoop().stop();
   mChreThread.join();
 
-  chre::deinit();
+  chre::deinitCommon();
   TestEventQueueSingleton::deinit();
   TaskManagerSingleton::deinit();
   deleteNanoappInfos();

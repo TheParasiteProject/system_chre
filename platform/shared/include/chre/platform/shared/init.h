@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,25 @@
  * limitations under the License.
  */
 
-#include "chre/core/init.h"
-
-#include "chre/platform/init.h"
+#pragma once
 
 namespace chre {
 
-void init() {
-  platformInit();
-}
+/**
+ * Performs initialization of CHRE common functionality. This involves the
+ * following:
+ *
+ *  1. SystemTime::init()
+ *  2. Construct the *Manager objects accepted in the EventLoopManager
+ *     constructor.
+ *  3. EventLoopManagerSingleton::init()
+ */
+void initCommon();
 
-void deinit() {
-  platformDeinit();
-}
+/**
+ * Performs deinitialization of CHRE common functionality. This will deinit the
+ * EventLoopManagerSingleton and the *Manager objects passed into it.
+ */
+void deinitCommon();
 
 }  // namespace chre

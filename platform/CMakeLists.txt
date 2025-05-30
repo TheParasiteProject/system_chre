@@ -77,6 +77,19 @@ pw_add_facade(chre.platform.host_link INTERFACE
     chre.variant.config
 )
 
+# TODO(b/424584443): Delete after all platforms are migrated to use
+# chre.platform.shared.init directly.
+pw_add_facade(chre.platform.init INTERFACE
+  BACKEND
+    chre.platform.init_BACKEND
+  HEADERS
+    include/chre/platform/init.h
+  PUBLIC_INCLUDES
+    include
+  PUBLIC_DEPS
+    chre.variant.config
+)
+
 pw_add_facade(chre.platform.log INTERFACE
   BACKEND
     chre.platform.log_BACKEND

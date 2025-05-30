@@ -981,7 +981,6 @@ cc_library_static {
         "core/host_comms_manager.cc",
         "core/host_endpoint_manager.cc",
         "core/host_message_hub_manager.cc",
-        "core/init.cc",
         "core/nanoapp.cc",
         "core/sensor.cc",
         "core/sensor_request.cc",
@@ -1025,6 +1024,7 @@ cc_library_static {
         "platform/shared/chre_api_sensor.cc",
         "platform/shared/chre_api_user_settings.cc",
         "platform/shared/chre_api_wifi.cc",
+        "platform/shared/init.cc",
         "platform/shared/log_buffer.cc",
         "platform/shared/memory_manager.cc",
         "platform/shared/nanoapp_abort.cc",
@@ -1108,10 +1108,10 @@ cc_defaults {
         "-DCHRE_WIFI_NAN_SUPPORT_ENABLED",
         "-DCHRE_WIFI_SUPPORT_ENABLED",
         "-DGTEST",
-        "-Wextra-semi",
-        "-Wvla-extension",
         "-Wall",
         "-Werror",
+        "-Wextra-semi",
+        "-Wvla-extension",
     ],
 }
 

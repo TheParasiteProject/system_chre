@@ -55,15 +55,15 @@ void EventLoopManager::lateInit() {
 #endif  // CHRE_SENSORS_SUPPORT_ENABLED
 
 #ifdef CHRE_GNSS_SUPPORT_ENABLED
-  mGnssManager.init();
+  mGnssManager->init();
 #endif  // CHRE_GNSS_SUPPORT_ENABLED
 
 #ifdef CHRE_WIFI_SUPPORT_ENABLED
-  mWifiRequestManager.init();
+  mWifiRequestManager->init();
 #endif  // CHRE_WIFI_SUPPORT_ENABLED
 
 #ifdef CHRE_WWAN_SUPPORT_ENABLED
-  mWwanRequestManager.init();
+  mWwanRequestManager->init();
 #endif  // CHRE_WWAN_SUPPORT_ENABLED
 
 #ifdef CHRE_AUDIO_SUPPORT_ENABLED

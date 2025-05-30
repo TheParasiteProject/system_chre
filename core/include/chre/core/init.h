@@ -17,6 +17,15 @@
 #ifndef CHRE_CORE_INIT_H_
 #define CHRE_CORE_INIT_H_
 
+/**
+ * @file CHRE is migrating all platforms away from using chre/core/init.h to
+ * doing their own platform-specific initialization. CHRE provides a reference
+ * init implementation in chre/platform/shared/init.h which most platforms will
+ * use.
+ *
+ * TODO(b/424584443): Delete this file after all platforms have been migrated
+ * away from using chre/core/init.h
+ */
 namespace chre {
 
 /**
