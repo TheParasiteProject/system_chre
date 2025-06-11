@@ -389,6 +389,7 @@ class WifiRequestManager : public NonCopyable {
         uint8_t resultTotal;
         uint8_t eventIndex;
         uint8_t scanType;
+        int32_t scanAgeMs;
       } scanEvent;
 
       struct {
