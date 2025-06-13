@@ -26,6 +26,7 @@
 
 #include "chre/core/event_loop_manager.h"
 #include "chre/core/static_nanoapps.h"
+#include "chre/platform/context.h"
 #include "chre/platform/shared/dram_vote_client.h"
 #include "chre/target_platform/init.h"
 
@@ -34,6 +35,7 @@
 #include "chre/target_platform/macros.h"
 #endif  // CHRE_USE_BUFFERED_LOGGING
 
+#include "FreeRTOS.h"
 #include "task.h"
 
 namespace chre {
@@ -174,6 +176,10 @@ const char *getChreFlushTaskName() {
 
 BaseType_t getChreTaskPriority() {
   return freertos::kChreTaskPriority;
+}
+
+bool inEventLoopThread() {
+  return (xTaskGetCurrentTaskHandle() == freertos::gChreTaskHandle);
 }
 
 }  // namespace chre
