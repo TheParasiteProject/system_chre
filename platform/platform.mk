@@ -479,7 +479,6 @@ TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/system_timer.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/power_control_manager.cc
 
 # Freertos sources
-TINYSYS_SRCS += $(CHRE_PREFIX)/platform/freertos/context.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/freertos/init.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/freertos/platform_nanoapp.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/freertos/memory_manager.cc
