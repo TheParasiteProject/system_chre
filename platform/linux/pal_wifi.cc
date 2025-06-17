@@ -230,6 +230,10 @@ void chrePalWifiApiClose() {
 
 bool chrePalWifiApiOpen(const struct chrePalSystemApi *systemApi,
                         const struct chrePalWifiCallbacks *callbacks) {
+  if (!TaskManagerSingleton::isInitialized()) {
+    TaskManagerSingleton::init();
+  }
+
   chrePalWifiApiClose();
 
   bool success = false;
