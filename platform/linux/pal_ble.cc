@@ -222,6 +222,10 @@ void chrePalBleApiClose() {
 
 bool chrePalBleApiOpen(const struct chrePalSystemApi *systemApi,
                        const struct chrePalBleCallbacks *callbacks) {
+  if (!TaskManagerSingleton::isInitialized()) {
+    TaskManagerSingleton::init();
+  }
+
   chrePalBleApiClose();
 
   bool success = false;
