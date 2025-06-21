@@ -25,7 +25,7 @@ namespace chre {
 bool HostEndpointManager::isHostEndpointConnected(uint16_t hostEndpointId,
                                                   size_t *index) {
   for (size_t i = 0; i < mHostEndpoints.size(); i++) {
-    if (mHostEndpoints[i].hostEndpointId == hostEndpointId) {
+    if (mHostEndpoints[i]->hostEndpointId == hostEndpointId) {
       *index = i;
       return true;
     }
@@ -39,6 +39,8 @@ void HostEndpointManager::hostNotificationCallback(uint16_t type, void *data,
   uint16_t hostEndpointId = NestedDataPtr<uint16_t>(data);
 
   auto callbackType = static_cast<SystemCallbackType>(type);
+  auto *info = static_cast<struct chreHostEndpointInfo *>(extraData);
+  UniquePtr<struct chreHostEndpointInfo> infoPtr(info);
   if (callbackType == SystemCallbackType::HostEndpointDisconnected) {
     size_t index;
     if (isHostEndpointConnected(hostEndpointId, &index)) {
@@ -63,18 +65,16 @@ void HostEndpointManager::hostNotificationCallback(uint16_t type, void *data,
            hostEndpointId);
     }
   } else {
-    auto *info = static_cast<struct chreHostEndpointInfo *>(extraData);
-
     size_t index;
     if (!isHostEndpointConnected(hostEndpointId, &index)) {
-      mHostEndpoints.push_back(*info);
+      if (!mHostEndpoints.push_back(std::move(infoPtr))) {
+        LOG_OOM();
+      }
     } else {
       LOGW("Got connected event for an existing host endpoint ID 0x%" PRIx16,
            hostEndpointId);
     }
   }
-
-  memoryFree(extraData);
 }
 
 auto HostEndpointManager::getHostNotificationCallback() {
@@ -90,7 +90,7 @@ bool HostEndpointManager::getHostEndpointInfo(
   size_t index;
   bool isConnected = isHostEndpointConnected(hostEndpointId, &index);
   if (isConnected) {
-    *info = mHostEndpoints[index];
+    *info = *mHostEndpoints[index];
   }
   return isConnected;
 }
