@@ -356,6 +356,16 @@ pw_add_library(chre.platform.shared.host_protocol_common STATIC
     chre.platform.shared.idl.host_messages_generated.cpp
 )
 
+pw_add_library(chre.platform.shared.init STATIC
+  HEADERS
+    include/chre/platform/shared/init.h
+  SOURCES
+    init.cc
+  PRIVATE_DEPS
+    chre.core
+    chre.platform.init.facade
+)
+
 pw_add_library(chre.platform.shared.loader_util INTERFACE
   HEADERS
     include/chre/platform/shared/loader_util.h

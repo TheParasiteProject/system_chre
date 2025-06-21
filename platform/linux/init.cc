@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "chre/core/init.h"
 #include "chre/core/event.h"
 #include "chre/core/event_loop.h"
 #include "chre/core/event_loop_manager.h"
@@ -28,6 +27,7 @@
 #include "chre/platform/linux/platform_log.h"
 #include "chre/platform/linux/task_util/task_manager.h"
 #include "chre/platform/log.h"
+#include "chre/platform/shared/init.h"
 #include "chre/platform/system_timer.h"
 #include "chre/util/time.h"
 
@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
     chre::TaskManagerSingleton::init();
 
     // Initialize the system.
-    chre::init();
+    chre::initCommon();
 
     // Register a signal handler.
     std::signal(SIGINT, signalHandler);
@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
     chreThread.join();
 
     chre::TaskManagerSingleton::deinit();
-    chre::deinit();
+    chre::deinitCommon();
     chre::PlatformLogSingleton::deinit();
   } catch (TCLAP::ExitException) {
   }

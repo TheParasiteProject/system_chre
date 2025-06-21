@@ -43,6 +43,7 @@ pw_add_library(chre.core STATIC
     chre.platform.atomic
     chre.platform.fatal_error
     chre.platform.host_link
+    chre.platform.init
     chre.platform.log
     chre.platform.memory_manager
     chre.platform.mutex

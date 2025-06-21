@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-#include "chre/core/init.h"
+#pragma once
 
-#include "chre/platform/init.h"
+#include "chre/target_platform/platform_bt_socket_resources_base.h"
 
 namespace chre {
 
-void init() {
-  platformInit();
-}
-
-void deinit() {
-  platformDeinit();
-}
+class PlatformBtSocketResources : public PlatformBtSocketResourcesBase {
+ public:
+  // Forward all arguments passed to the PlatformBtSocketResources constructor
+  // to the PlatformBtSocketResourcesBase constructor
+  template <typename... Args>
+  PlatformBtSocketResources(Args &&...args)
+      : PlatformBtSocketResourcesBase(std::forward<Args>(args)...) {}
+};
 
 }  // namespace chre

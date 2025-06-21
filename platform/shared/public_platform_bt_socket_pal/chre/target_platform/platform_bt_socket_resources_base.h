@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
-#include "chre/core/init.h"
+#pragma once
 
-#include "chre/platform/init.h"
+#include "pw_bluetooth_proxy/proxy_host.h"
 
 namespace chre {
 
-void init() {
-  platformInit();
-}
+class PlatformBtSocketResourcesBase {
+ public:
+  PlatformBtSocketResourcesBase(pw::bluetooth::proxy::ProxyHost &proxyHost)
+      : mProxyHost(proxyHost) {}
 
-void deinit() {
-  platformDeinit();
-}
+  pw::bluetooth::proxy::ProxyHost &getProxyHost() {
+    return mProxyHost;
+  }
+
+ private:
+  pw::bluetooth::proxy::ProxyHost &mProxyHost;
+};
 
 }  // namespace chre

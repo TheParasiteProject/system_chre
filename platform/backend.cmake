@@ -20,6 +20,12 @@ pw_add_backend_variable(chre.platform.fatal_error_BACKEND)
 # Backend for chre.platform.host_link.
 pw_add_backend_variable(chre.platform.host_link_BACKEND)
 
+# Backend for chre.platform.init.
+pw_add_backend_variable(chre.platform.init_BACKEND
+  DEFAULT_BACKEND
+    chre.platform.shared.init
+)
+
 # Backend for chre.platform.log.
 pw_add_backend_variable(chre.platform.log_BACKEND)
 
