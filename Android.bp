@@ -1211,34 +1211,6 @@ cc_library_static {
     ],
 }
 
-cc_binary {
-    name: "chre_daemon_exynos",
-    cpp_std: "c++20",
-    defaults: ["chre_daemon_common"],
-    soc_specific: true,
-    local_include_dirs: [
-        "host/exynos",
-    ],
-    cflags: ["-DCHRE_LPMA_REQUEST_START_RECOGNITION"],
-    srcs: [
-        "host/exynos/exynos_daemon.cc",
-        "host/exynos/main.cc",
-    ],
-    static_libs: [
-        "pw_base64",
-        "pw_detokenizer",
-        "pw_polyfill",
-        "pw_span",
-        "pw_varint",
-    ],
-    shared_libs: [
-        "android.hardware.soundtrigger@2.0",
-        "libhidlbase",
-        "libpower",
-    ],
-    init_rc: ["host/exynos/chre_daemon_exynos.rc"],
-}
-
 java_library_static {
     name: "chre_api_test_proto_java_lite",
     host_supported: true,
