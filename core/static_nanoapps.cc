@@ -39,16 +39,16 @@ namespace chre {
 //! The default list of static nanoapps to load.
 const StaticNanoappInitFunction kStaticNanoappList[] = {
 #ifdef CHRE_LOAD_GNSS_WORLD
-  initializeStaticNanoappGnssWorld,
+    initializeStaticNanoappGnssWorld,
 #endif
 #ifdef CHRE_LOAD_SENSOR_WORLD
-  initializeStaticNanoappSensorWorld,
+    initializeStaticNanoappSensorWorld,
 #endif
 #ifdef CHRE_LOAD_WIFI_WORLD
-  initializeStaticNanoappWifiWorld,
+    initializeStaticNanoappWifiWorld,
 #endif
 #ifdef CHRE_LOAD_WWAN_WORLD
-  initializeStaticNanoappWwanWorld,
+    initializeStaticNanoappWwanWorld,
 #endif
 };
 
