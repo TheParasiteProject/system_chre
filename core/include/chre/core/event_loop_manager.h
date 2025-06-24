@@ -60,6 +60,8 @@ class BleSocketManager;
 class GnssManager;
 class WifiRequestManager;
 class WwanRequestManager;
+class ChreMessageHubManager;
+class HostMessageHubManager;
 
 /**
  * A class that keeps track of all event loops in the system. This class
@@ -91,11 +93,15 @@ class EventLoopManager : public NonCopyable {
  public:
   EventLoopManager(BleSocketManager *bleSocketManager, GnssManager *gnssManager,
                    WifiRequestManager *wifiRequestManager,
-                   WwanRequestManager *wwanRequestManager)
+                   WwanRequestManager *wwanRequestManager,
+                   ChreMessageHubManager *chreMessageHubManager,
+                   HostMessageHubManager *hostMessageHubManager)
       : mBleSocketManager(bleSocketManager),
         mGnssManager(gnssManager),
         mWifiRequestManager(wifiRequestManager),
-        mWwanRequestManager(wwanRequestManager) {
+        mWwanRequestManager(wwanRequestManager),
+        mChreMessageHubManager(chreMessageHubManager),
+        mHostMessageHubManager(hostMessageHubManager) {
 #ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
     CHRE_ASSERT(mBleSocketManager != nullptr);
 #endif  // CHRE_BLE_SOCKET_SUPPORT_ENABLED
@@ -108,6 +114,10 @@ class EventLoopManager : public NonCopyable {
 #ifdef CHRE_WWAN_SUPPORT_ENABLED
     CHRE_ASSERT(mWwanRequestManager != nullptr);
 #endif  // CHRE_WWAN_SUPPORT_ENABLED
+#ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+    CHRE_ASSERT(mChreMessageHubManager != nullptr);
+    CHRE_ASSERT(mHostMessageHubManager != nullptr);
+#endif  // CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
   }
 
   /**
@@ -378,15 +388,13 @@ class EventLoopManager : public NonCopyable {
     return mSystemHealthMonitor;
   }
 
-#ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
   ChreMessageHubManager &getChreMessageHubManager() {
-    return mChreMessageHubManager;
+    return *mChreMessageHubManager;
   }
 
   HostMessageHubManager &getHostMessageHubManager() {
-    return mHostMessageHubManager;
+    return *mHostMessageHubManager;
   }
-#endif  // CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
 
   /**
    * Performs second-stage initialization of things that are not necessarily
@@ -458,13 +466,11 @@ class EventLoopManager : public NonCopyable {
   //! The SettingManager that manages setting states.
   SettingManager mSettingManager;
 
-#ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
   //! The ChreMessageHubManager that manages the CHRE Message Hub.
-  ChreMessageHubManager mChreMessageHubManager;
+  ChreMessageHubManager *mChreMessageHubManager = nullptr;
 
   //! The HostMessageHubManager handling communication with host message hubs.
-  HostMessageHubManager mHostMessageHubManager;
-#endif  // CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+  HostMessageHubManager *mHostMessageHubManager = nullptr;
 };
 
 //! Provide an alias to the EventLoopManager singleton.

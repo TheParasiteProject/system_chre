@@ -75,7 +75,7 @@ void EventLoopManager::lateInit() {
 #endif  // CHRE_BLE_SUPPORT_ENABLED
 
 #ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
-  mChreMessageHubManager.init();
+  mChreMessageHubManager->init();
 #endif  // CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
 }
 
