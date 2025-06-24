@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "chre/platform/init.h"
 #include "chre/platform/shared/init.h"
 
 #include <optional>
@@ -160,14 +159,6 @@ void deinitWwanRequestManager() {
 }
 
 }  // namespace
-
-void platformInit() {
-  initCommon();
-}
-
-void platformDeinit() {
-  deinitCommon();
-}
 
 void initCommon() {
   LOGI("CHRE init, version: %s", kChreVersionString);
