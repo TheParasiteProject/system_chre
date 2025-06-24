@@ -20,6 +20,7 @@
 #include "chre/core/event_loop_manager.h"
 #include "chre/platform/log.h"
 #include "chre/platform/shared/memory.h"
+#include "pw_multibuf/from_span.h"
 
 namespace chre {
 
@@ -64,6 +65,37 @@ PlatformBtSocketBase::PlatformBtSocketBase(
 
 bool PlatformBtSocket::isInitialized() {
   return mL2capCoc.has_value();
+}
+
+int32_t PlatformBtSocket::sendSocketPacket(
+    const void *data, uint16_t length,
+    chreBleSocketPacketFreeFunction *freeCallback) {
+  int32_t result = CHRE_BLE_SOCKET_SEND_STATUS_SUCCESS;
+
+  auto nonConstData = const_cast<uint8_t *>(static_cast<const uint8_t *>(data));
+  pw::ByteSpan byteSpan(reinterpret_cast<std::byte *>(nonConstData), length);
+  std::optional<pw::multibuf::MultiBuf> multibuf = pw::multibuf::FromSpan(
+      mTxFirstFitAllocator, byteSpan, [](pw::ByteSpan) {});
+  if (!multibuf.has_value()) {
+    LOG_OOM();
+    result = CHRE_BLE_SOCKET_SEND_STATUS_FAILURE;
+  } else {
+    pw::bluetooth::proxy::StatusWithMultiBuf status =
+        mL2capCoc.value().Write(std::move(*multibuf));
+    if (!status.status.ok()) {
+      LOGD("L2CAP COC socket queue full");
+      result = CHRE_BLE_SOCKET_SEND_STATUS_QUEUE_FULL;
+    }
+  }
+  // Per CHRE API, if this call results in
+  // CHRE_BLE_SOCKET_SEND_STATUS_QUEUE_FULL, do not use the free callback. In
+  // this scenario, it is the responsibility of the nanoapp to free the data.
+  // The nanoapp may choose to hold on to the data until it receives a
+  // CHRE_EVENT_BLE_SOCKET_SEND_AVAILABLE event when it can re-attempt the send.
+  if (result != CHRE_BLE_SOCKET_SEND_STATUS_QUEUE_FULL) {
+    freeCallback(nonConstData, length);
+  }
+  return result;
 }
 
 }  // namespace chre

@@ -61,11 +61,9 @@ class BleSocketManager : public NonCopyable {
    *
    * @see chreBleSocketSend
    */
-  int32_t sendBleSocketPacket(
-      uint64_t /*socketId*/, const void * /*data*/, uint16_t /*length*/,
-      chreBleSocketPacketFreeFunction * /*freeCallback*/) {
-    return CHRE_ERROR_NOT_SUPPORTED;
-  }
+  int32_t sendBleSocketPacket(uint64_t socketId, const void *data,
+                              uint16_t length,
+                              chreBleSocketPacketFreeFunction *freeCallback);
 
  private:
   static constexpr uint8_t kMaxNumSockets = 3;

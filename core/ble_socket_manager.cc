@@ -84,6 +84,23 @@ bool BleSocketManager::acceptBleSocket(uint64_t socketId) {
   return btSocket != nullptr;
 }
 
+int32_t BleSocketManager::sendBleSocketPacket(
+    uint64_t socketId, const void *data, uint16_t length,
+    chreBleSocketPacketFreeFunction *freeCallback) {
+  PlatformBtSocket *btSocket = mBtSockets.find(
+      [](PlatformBtSocket *btSocket, void *data) {
+        uint64_t socketId = *(static_cast<uint64_t *>(data));
+        return (btSocket->getId() == socketId);
+      },
+      &socketId);
+  if (btSocket == nullptr) {
+    LOGE("BT socketId %" PRIu64 " not found", socketId);
+    freeCallback(const_cast<void *>(data), length);
+    return CHRE_BLE_SOCKET_SEND_STATUS_FAILURE;
+  }
+  return btSocket->sendSocketPacket(data, length, freeCallback);
+}
+
 }  // namespace chre
 
 #endif  // CHRE_BLE_SOCKET_SUPPORT_ENABLED

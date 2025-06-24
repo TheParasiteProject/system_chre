@@ -22,6 +22,7 @@
 #include <cstdint>
 
 #include "chre/platform/platform_bt_socket_resources.h"
+#include "chre_api/chre.h"
 
 namespace chre {
 
@@ -64,6 +65,14 @@ class PlatformBtSocket : public PlatformBtSocketBase {
   }
 
   bool isInitialized();
+
+  /**
+   * Sends a packet to the socket.
+   *
+   * @see chreBleSocketSend
+   */
+  int32_t sendSocketPacket(const void *data, uint16_t length,
+                           chreBleSocketPacketFreeFunction *freeCallback);
 
  private:
   uint64_t mId;
