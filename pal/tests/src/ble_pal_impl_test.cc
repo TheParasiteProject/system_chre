@@ -198,6 +198,9 @@ TEST_F(PalBleTest, FilteredScan) {
   }
 
   EXPECT_TRUE(mApi->stopScan());
+  gCallbacks->mCondVarStatus.wait_for(gCallbacks->mMutex, kBleEventTimeoutNs);
+  ASSERT_TRUE(gCallbacks->mEnabled.has_value());
+  EXPECT_FALSE(gCallbacks->mEnabled.value());
 }
 
 }  // namespace
