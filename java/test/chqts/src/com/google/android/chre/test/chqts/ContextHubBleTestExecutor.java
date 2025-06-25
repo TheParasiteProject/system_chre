@@ -16,10 +16,20 @@
 
 package com.google.android.chre.test.chqts;
 
+import static android.bluetooth.BluetoothDevice.TRANSPORT_LE;
+
 import static com.google.common.truth.Truth.assertThat;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattServer;
+import android.bluetooth.BluetoothGattServerCallback;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertisingSet;
 import android.bluetooth.le.AdvertisingSetCallback;
@@ -31,9 +41,12 @@ import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.content.Context;
 import android.hardware.location.NanoAppBinary;
 import android.os.ParcelUuid;
 import android.util.Log;
+
+import androidx.test.core.app.ApplicationProvider;
 
 import com.google.android.utils.chre.ChreApiTestUtil;
 import com.google.common.collect.ImmutableList;
@@ -115,10 +128,31 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
      */
     public static final int CHRE_BLE_TEST_MANUFACTURER_ID = 0xEEEE;
 
+    /**
+     * For requesting RSSI read from CHRE
+     */
+    public static final int CHRE_MESSAGE_READ_RSSI = 0x16;
+
+    /**
+     * Call back timeout.
+     */
+    private static final int CALLBACK_TIMEOUT_SEC = 5;
+
+    /**
+     * RSSI value indicating no RSSI value available.
+     */
+    private static final int CHRE_BLE_RSSI_NONE = 127;
 
     private BluetoothAdapter mBluetoothAdapter = null;
     private BluetoothLeAdvertiser mBluetoothLeAdvertiser = null;
     private BluetoothLeScanner mBluetoothLeScanner = null;
+    private BluetoothManager mBluetoothManager;
+    private BluetoothGattServer mBluetoothGattServer;
+    private BluetoothDevice mServer;
+    private BluetoothGatt mBluetoothGatt;
+    private Context mContextGatt;
+    private CountDownLatch mConnectionBlocker = null;
+    private Integer mWaitForConnectionState = null;
 
     /**
      * The signal for advertising start.
@@ -202,10 +236,162 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
         BluetoothManager bluetoothManager = mContext.getSystemService(BluetoothManager.class);
         assertThat(bluetoothManager).isNotNull();
         mBluetoothAdapter = bluetoothManager.getAdapter();
+        mContextGatt = ApplicationProvider.getApplicationContext();
         if (mBluetoothAdapter != null) {
             mBluetoothLeAdvertiser = mBluetoothAdapter.getBluetoothLeAdvertiser();
             mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
         }
+    }
+
+    /**
+     * Creates a new GATT server and registers a primary service with the give UUID.
+     */
+    public BluetoothGattServer createGattServer(String expectedMacAddress) {
+        if (mContextGatt == null) {
+            Log.e(TAG, "Context is null.");
+            return null;
+        }
+        mBluetoothManager =
+                    mContextGatt.getSystemService(BluetoothManager.class);
+        if (mBluetoothManager == null) {
+            Log.e(TAG, "BluetoothManager is null");
+            return null;
+        }
+
+        mBluetoothGattServer =  mBluetoothManager.openGattServer(
+                        mContextGatt, new BluetoothGattServerCallback() {});
+
+        return mBluetoothGattServer;
+    }
+
+    /**
+     * Retrieves the list of currently connected GATT client devices.
+     */
+    public List<BluetoothDevice> getConnectedDevices() {
+        return mBluetoothManager.getConnectedDevices(BluetoothProfile.GATT_SERVER);
+    }
+
+    /**
+     * Callback for Gatt client connection events.
+     */
+    private final BluetoothGattCallback mGattCallback =
+            new BluetoothGattCallback() {
+                @Override
+                public void onConnectionStateChange(BluetoothGatt device,
+                        int status, int newState) {
+
+                        if (newState == mWaitForConnectionState && mConnectionBlocker != null) {
+                            Log.v(TAG, "Connected");
+                            mConnectionBlocker.countDown();
+                        }
+                    }
+            };
+
+    /**
+     * Connects to a BLE server with a know MAC address, initates a GATT connection,
+     * and reads the remote RSSI value after connection is established.
+     */
+    public BluetoothDevice connect(String expectedMacAddress) {
+        var serverFoundBlocker = new CountDownLatch(1);
+        var scanner = mBluetoothAdapter.getBluetoothLeScanner();
+        var callback = new ScanCallback() {
+                    @Override
+                    public void onScanResult(int callbackType, ScanResult result) {
+                        var deviceAddress = result.getDevice().getAddress();
+                        if (deviceAddress != null
+                                && deviceAddress.equalsIgnoreCase(expectedMacAddress)) {
+                            mServer = result.getDevice();
+                            serverFoundBlocker.countDown();
+                        }
+                    }
+                };
+        scanner.startScan(null,
+             new ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .setLegacy(false)
+                .build(), callback);
+        boolean timeout = false;
+        try {
+            timeout = !serverFoundBlocker.await(CALLBACK_TIMEOUT_SEC, SECONDS);
+        } catch (InterruptedException e) {
+            Log.e(TAG, "", e);
+            timeout = true;
+        }
+        scanner.stopScan(callback);
+        if (timeout) {
+            Log.e(TAG, "Did not discover server");
+            return null;
+        }
+        mConnectionBlocker = new CountDownLatch(1);
+        mWaitForConnectionState = BluetoothProfile.STATE_CONNECTED;
+        mBluetoothGatt = mServer.connectGatt(mContextGatt, false, mGattCallback, TRANSPORT_LE);
+        timeout = false;
+        try {
+            timeout = !mConnectionBlocker.await(CALLBACK_TIMEOUT_SEC, SECONDS);
+        } catch (InterruptedException e) {
+            Log.e(TAG, "", e);
+            timeout = true;
+        }
+        if (timeout) {
+            Log.e(TAG, "Did not connect to server");
+            return null;
+        }
+
+        return mServer;
+    }
+
+    /**
+     * Disconnects from the GATT server.
+     */
+    public boolean disconnect(String expectedMacAddress) {
+        if (mServer == null || !mServer.getAddress().equalsIgnoreCase(expectedMacAddress)) {
+            Log.e(TAG, "Connected server does not match expected MAC address: "
+                        + expectedMacAddress);
+            return false;
+        }
+
+        mConnectionBlocker = new CountDownLatch(1);
+        mWaitForConnectionState = BluetoothProfile.STATE_DISCONNECTED;
+        mBluetoothGatt.disconnect();
+
+        boolean timeout = false;
+        try {
+            timeout = !mConnectionBlocker.await(CALLBACK_TIMEOUT_SEC, SECONDS);
+        } catch (InterruptedException e) {
+            Log.e(TAG, "", e);
+            timeout = true;
+        }
+        if (timeout) {
+            Log.e(TAG, "Did not disconnect from server");
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Sends a read RSSI request to CHRE
+     */
+    public boolean sendReadRssiMessageToChre(int connectionHandle) throws Exception {
+        if (connectionHandle <= 0) {
+            Log.e(TAG, "Invalid connection handle");
+        }
+
+        ChreApiTest.ChreBleReadRssiRequest.Builder message =
+                ChreApiTest.ChreBleReadRssiRequest.newBuilder()
+                            .setConnectionHandle(connectionHandle);
+
+        ChreApiTestUtil util = new ChreApiTestUtil();
+        List<ChreApiTest.ChreBleReadRssiEvent> response =
+                util.callServerStreamingRpcMethodSync(getRpcClient(),
+                        "chre.rpc.ChreApiTestService.ChreBleReadRssiSync",
+                        message.build());
+        assertThat(response).isNotEmpty();
+        for (ChreApiTest.ChreBleReadRssiEvent status: response) {
+            assertThat(status.getStatus()).isTrue();
+            assertThat(status.getRssi()).isNotEqualTo(CHRE_BLE_RSSI_NONE);
+        }
+        return true;
     }
 
     /**

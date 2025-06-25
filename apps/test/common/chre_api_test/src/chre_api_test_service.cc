@@ -185,6 +185,24 @@ bool ChreApiTestService::validateInputAndCallChreGetSensorInfo(
 
   return true;
 }
+bool ChreApiTestService::validateInputAndCallChreBleReadRssiAsync(
+    const chre_rpc_ChreBleReadRssiRequest &request, chre_rpc_Status &response) {
+  if (request.connectionHandle == 0) {
+    LOGE("Invalid connection handle: 0");
+    response.status = false;
+    return false;
+  }
+
+  bool success =
+      chreBleReadRssiAsync(request.connectionHandle, &mSyncTimerHandle);
+  if (!success) {
+    LOGE("ChreBleReadRssiSync failed for handle %" PRIu32,
+         request.connectionHandle);
+  }
+
+  response.status = success;
+  return success;
+}
 
 bool ChreApiTestService::validateInputAndCallChreGetSensorSamplingStatus(
     const chre_rpc_ChreHandleInput &request,
