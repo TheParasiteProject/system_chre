@@ -26,6 +26,11 @@
 
 namespace chre {
 
+enum class SocketEvent : uint8_t {
+  SEND_AVAILABLE,
+  UNKNOWN,
+};
+
 /**
  * Defines the common interface to BT socket functionality that is implemented
  * in a platform-specific way, and must be supported on every platform.
@@ -36,7 +41,6 @@ class PlatformBtSocket : public PlatformBtSocketBase {
                    PlatformBtSocketResources &platformBtSocketResources)
       : PlatformBtSocketBase(socketData, platformBtSocketResources),
         mId(socketData.socketId),
-        mEndpointId(socketData.endpointId),
         mHostClientId(socketData.hostClientId) {}
 
   // Delete the copy constructor
@@ -60,8 +64,12 @@ class PlatformBtSocket : public PlatformBtSocketBase {
     return mId;
   }
 
-  uint64_t getEndpointId() {
-    return mEndpointId;
+  uint16_t getNanoappInstanceId() {
+    return mInstanceId;
+  }
+
+  void setNanoappInstanceId(uint16_t instanceId) {
+    mInstanceId = instanceId;
   }
 
   bool isInitialized();
@@ -74,9 +82,11 @@ class PlatformBtSocket : public PlatformBtSocketBase {
   int32_t sendSocketPacket(const void *data, uint16_t length,
                            chreBleSocketPacketFreeFunction *freeCallback);
 
+  // void handleSocketEventSync(uint32_t event);
+
  private:
   uint64_t mId;
-  uint64_t mEndpointId;
+  uint16_t mInstanceId = 0;
   uint16_t mHostClientId;
   bool mSocketAccepted = false;
 };

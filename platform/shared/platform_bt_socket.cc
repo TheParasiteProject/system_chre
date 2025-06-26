@@ -20,6 +20,7 @@
 #include "chre/core/event_loop_manager.h"
 #include "chre/platform/log.h"
 #include "chre/platform/shared/memory.h"
+#include "chre/util/unique_ptr.h"
 #include "pw_multibuf/from_span.h"
 
 namespace chre {
@@ -28,6 +29,16 @@ namespace {
 
 // TODO(b/393485754): determine correct number of credits
 constexpr uint16_t kRxAdditionalCredits = 0xFFFF;
+
+SocketEvent convertPwSocketEventToChre(
+    pw::bluetooth::proxy::L2capChannelEvent event) {
+  switch (event) {
+    case pw::bluetooth::proxy::L2capChannelEvent::kWriteAvailable:
+      return SocketEvent::SEND_AVAILABLE;
+    default:
+      return SocketEvent::UNKNOWN;
+  }
+}
 
 }  // namespace
 
@@ -47,15 +58,37 @@ PlatformBtSocketBase::PlatformBtSocketBase(
       .credits = socketData.txConfig.credits,
   };
 
+  uint64_t socketId = socketData.socketId;
+
+  /**
+   * The eventCallback will not be invoked from the CHRE thread. It is expected
+   * that the caller invokes DramVoteClient::incrementDramVoteCount() and
+   * DramVoteClient::decrementDramVoteCount() around use of this function.
+   *
+   * NOTE: handlePlatformSocketEvent() adds an event to CHRE's event queue. We
+   * call forceDramAccess after adding this event to CHRE's event queue to avoid
+   * the race condition in which forceDramAccess() is called and CHRE's event
+   * queue empties, triggering a call to removeDramAccessVote() right before
+   * this event is enqueued.
+   */
+  auto eventCallback = [socketId](
+                           pw::bluetooth::proxy::L2capChannelEvent event) {
+    EventLoopManagerSingleton::get()
+        ->getBleSocketManager()
+        .handlePlatformSocketEvent(socketId, convertPwSocketEventToChre(event));
+    // Call after enqueuing event on CHRE's event loop queue
+    // TODO(b/429237573): Support enqueueing high power events on CHRE's event
+    // queue
+    forceDramAccess();
+  };
+
   pw::Result<pw::bluetooth::proxy::L2capCoc> result =
       platformBtSocketResources.getProxyHost().AcquireL2capCoc(
           mSimpleAllocator, socketData.connectionHandle, pwRxConfig, pwTxConfig,
           [this](pw::multibuf::MultiBuf &&payload) {
             handleSocketData(std::move(payload));
           },
-          [this](pw::bluetooth::proxy::L2capChannelEvent event) {
-            handleSocketEvent(event);
-          });
+          eventCallback);
   if (!result.ok()) {
     LOGE("AcquireL2capCoc failed: %s", result.status().str());
     return;

@@ -50,19 +50,6 @@ class PlatformBtSocketBase {
     // TODO(b/392139857): Implement receiving data from the BT offload socket
   }
 
-  /**
-   * Callback to handle asynchronous socket events such as errors and flow
-   * control events encountered by the channel.
-   *
-   * @see pw::bluetooth::proxy::ProxyHost::AcquireL2capCoc()
-   */
-  void handleSocketEvent(pw::bluetooth::proxy::L2capChannelEvent) {
-    // TODO(b/392139852): Handle write complete event and send
-    // CHRE_EVENT_BLE_SOCKET_SEND_AVAILABLE event to nanaopp
-
-    // TODO(b/393485847): Handle socket closures
-  }
-
  protected:
   // Multibuf Rx allocators
 

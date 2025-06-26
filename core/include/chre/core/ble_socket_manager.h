@@ -65,6 +65,22 @@ class BleSocketManager : public NonCopyable {
                               uint16_t length,
                               chreBleSocketPacketFreeFunction *freeCallback);
 
+  /**
+   * Handles a socket event originating from the platform. Switches the context
+   * to the event loop thread before processing the event with
+   * handlePlatformSocketEventSync.
+   *
+   * @param socketId Identifies socket which the event is for.
+   * @param socketEvent Socket event to be processed.
+   */
+  void handlePlatformSocketEvent(uint64_t socketId, SocketEvent socketEvent);
+
+  /**
+   * @see handlePlatformSocketEvent
+   */
+  void handlePlatformSocketEventSync(uint64_t socketId,
+                                     SocketEvent socketEvent);
+
  private:
   static constexpr uint8_t kMaxNumSockets = 3;
 
@@ -82,6 +98,15 @@ class BleSocketManager : public NonCopyable {
    * Platform resources used for creating a new BT socket.
    */
   PlatformBtSocketResources mPlatformBtSocketResources;
+
+  PlatformBtSocket *findPlatformBtSocket(uint64_t socketId) {
+    return mBtSockets.find(
+        [](PlatformBtSocket *btSocket, void *data) {
+          uint64_t socketId = *(static_cast<uint64_t *>(data));
+          return (btSocket->getId() == socketId);
+        },
+        &socketId);
+  }
 };
 
 }  // namespace chre
