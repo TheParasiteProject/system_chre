@@ -21,7 +21,6 @@
 #include "chre/core/ble_l2cap_coc_socket_data.h"
 #include "chre/platform/platform_bt_socket.h"
 #include "chre/platform/platform_bt_socket_resources.h"
-#include "chre/util/fixed_size_vector.h"
 #include "chre/util/memory_pool.h"
 #include "chre_api/chre.h"
 
@@ -64,6 +63,17 @@ class BleSocketManager : public NonCopyable {
   int32_t sendBleSocketPacket(uint64_t socketId, const void *data,
                               uint16_t length,
                               chreBleSocketPacketFreeFunction *freeCallback);
+
+  /**
+   * Handles a request to free the socket packet from the platform. Switches the
+   * context to the event loop thread before freeing the socket packet.
+   *
+   * @param data Socket packet to be freed.
+   * @param length Length of socket packet.
+   * @param freeCallback @see chreBleSocketPacketFreeFunction
+   */
+  void freeSocketPacket(void *data, uint16_t length,
+                        chreBleSocketPacketFreeFunction *freeCallback);
 
   /**
    * Handles a socket event originating from the platform. Switches the context

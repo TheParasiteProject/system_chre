@@ -30,6 +30,12 @@ struct socketEventData {
   SocketEvent event;
 };
 
+struct socketPacketData {
+  void *data;
+  uint16_t length;
+  chreBleSocketPacketFreeFunction *freeCallback;
+};
+
 }  // namespace
 
 chreError BleSocketManager::socketConnected(
@@ -104,6 +110,24 @@ int32_t BleSocketManager::sendBleSocketPacket(
     return CHRE_BLE_SOCKET_SEND_STATUS_FAILURE;
   }
   return btSocket->sendSocketPacket(data, length, freeCallback);
+}
+
+void BleSocketManager::freeSocketPacket(
+    void *data, uint16_t length,
+    chreBleSocketPacketFreeFunction *freeCallback) {
+  auto packetData = MakeUnique<socketPacketData>();
+  packetData->data = data;
+  packetData->length = length;
+  packetData->freeCallback = freeCallback;
+
+  auto callback = [](SystemCallbackType,
+                     UniquePtr<socketPacketData> &&packetData) {
+    packetData->freeCallback(packetData->data, packetData->length);
+  };
+
+  EventLoopManagerSingleton::get()->deferCallback(
+      SystemCallbackType::BleSocketFreePacketEvent, std::move(packetData),
+      callback);
 }
 
 void BleSocketManager::handlePlatformSocketEvent(uint64_t socketId,
