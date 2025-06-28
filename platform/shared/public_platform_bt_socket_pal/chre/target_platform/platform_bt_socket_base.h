@@ -66,25 +66,33 @@ class PlatformBtSocketBase {
  protected:
   // Multibuf Rx allocators
 
-  static constexpr size_t kMultiBufAreaSize = 2 * 1024;
+  static constexpr size_t kRxMultiBufAreaSize = 2 * 1024;
 
-  static constexpr size_t kMultiBufMetaDataSize = 256;
+  static constexpr size_t kRxMultiBufMetaDataSize = 256;
 
-  std::array<std::byte, kMultiBufAreaSize> mMultibufArea{};
+  static constexpr size_t kTxMultiBufMetaDataSize = 256;
 
-  std::array<std::byte, kMultiBufMetaDataSize> mMultibufMetaData{};
+  std::array<std::byte, kRxMultiBufAreaSize> mRxMultibufArea{};
+
+  std::array<std::byte, kRxMultiBufMetaDataSize> mRxMultibufMetaData{};
 
   pw::allocator::FirstFitAllocator<pw::allocator::FirstFitBlock<uintptr_t>>
-      mFirstFitAllocator{mMultibufMetaData};
+      mRxFirstFitAllocator{mRxMultibufMetaData};
 
   pw::allocator::SynchronizedAllocator<pw::sync::Mutex> mSyncAllocator{
-      mFirstFitAllocator};
+      mRxFirstFitAllocator};
 
   // Allocator used for Rx data received from the BT socket.
-  pw::multibuf::SimpleAllocator mSimpleAllocator{mMultibufArea, mSyncAllocator};
+  pw::multibuf::SimpleAllocator mSimpleAllocator{mRxMultibufArea,
+                                                 mSyncAllocator};
 
   // PW L2CAP COC utility used for interacting with the BT socket.
   std::optional<pw::bluetooth::proxy::L2capCoc> mL2capCoc;
+
+  std::array<std::byte, kTxMultiBufMetaDataSize> mTxMultibufMetaData{};
+
+  pw::allocator::FirstFitAllocator<pw::allocator::FirstFitBlock<uintptr_t>>
+      mTxFirstFitAllocator{mTxMultibufMetaData};
 };
 
 }  // namespace chre

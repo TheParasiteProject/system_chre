@@ -90,3 +90,13 @@ flag {
     purpose: PURPOSE_BUGFIX
   }
 }
+
+flag {
+  name: "abort_if_client_callback_is_stuck"
+  namespace: "context_hub"
+  description: "Flag guarding the watchdog aborting the client process if the callback is hung"
+  bug: "421606181"
+  metadata {
+    purpose: PURPOSE_BUGFIX
+  }
+}

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "chre/platform/init.h"
 #include "chre/platform/shared/init.h"
 
 #include <optional>
@@ -96,6 +95,18 @@ CHRE_WWAN_MEMORY_REGION
 std::optional<WwanRequestManager> gWwanRequestManager;
 #endif  // CHRE_WWAN_SUPPORT_ENABLED
 
+#ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+#ifndef CHRE_MESSAGE_ROUTER_MEMORY_REGION
+#define CHRE_MESSAGE_ROUTER_MEMORY_REGION
+#endif  // CHRE_MESSAGE_ROUTER_MEMORY_REGION
+
+CHRE_MESSAGE_ROUTER_MEMORY_REGION
+std::optional<ChreMessageHubManager> gChreMessageHubManager;
+
+CHRE_MESSAGE_ROUTER_MEMORY_REGION
+std::optional<HostMessageHubManager> gHostMessageHubManager;
+#endif  // CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+
 static const char *kChreVersionString = chre::getChreVersionString();
 
 BleSocketManager *getBleSocketManager() {
@@ -159,15 +170,37 @@ void deinitWwanRequestManager() {
 #endif  // CHRE_WWAN_SUPPORT_ENABLED
 }
 
+ChreMessageHubManager *initAndGetChreMessageHubManager() {
+#ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+  gChreMessageHubManager.emplace();
+  return &gChreMessageHubManager.value();
+#else
+  return nullptr;
+#endif  // CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+}
+
+void deinitChreMessageHubManager() {
+#ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+  gChreMessageHubManager.reset();
+#endif  // CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+}
+
+HostMessageHubManager *initAndGetHostMessageHubManager() {
+#ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+  gHostMessageHubManager.emplace();
+  return &gHostMessageHubManager.value();
+#else
+  return nullptr;
+#endif  // CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+}
+
+void deinitHostMessageHubManager() {
+#ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+  gHostMessageHubManager.reset();
+#endif  // CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
+}
+
 }  // namespace
-
-void platformInit() {
-  initCommon();
-}
-
-void platformDeinit() {
-  deinitCommon();
-}
 
 void initCommon() {
   LOGI("CHRE init, version: %s", kChreVersionString);
@@ -176,7 +209,8 @@ void initCommon() {
 
   EventLoopManagerSingleton::init(
       getBleSocketManager(), initAndGetGnssManager(),
-      initAndGetWifiRequestManager(), initAndGetWwanRequestManager());
+      initAndGetWifiRequestManager(), initAndGetWwanRequestManager(),
+      initAndGetChreMessageHubManager(), initAndGetHostMessageHubManager());
 }
 
 void deinitCommon() {
@@ -186,6 +220,8 @@ void deinitCommon() {
   deinitGnssManager();
   deinitWifiRequestManager();
   deinitWwanRequestManager();
+  deinitChreMessageHubManager();
+  deinitHostMessageHubManager();
 
   LOGD("CHRE deinit");
 }

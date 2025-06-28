@@ -363,7 +363,6 @@ pw_add_library(chre.platform.shared.init STATIC
     init.cc
   PRIVATE_DEPS
     chre.core
-    chre.platform.init.facade
 )
 
 pw_add_library(chre.platform.shared.loader_util INTERFACE
