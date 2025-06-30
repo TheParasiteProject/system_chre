@@ -1112,7 +1112,9 @@ bool chppSendTimestampedRequestOrFail(
 
   chppTimestampOutgoingRequest(endpointState->appContext, outReqState, buf,
                                timeoutNs);
+  chppMutexLock(&endpointState->syncResponse.mutex);
   endpointState->syncResponse.ready = false;
+  chppMutexUnlock(&endpointState->syncResponse.mutex);
 
   bool success = chppEnqueueTxDatagramOrFail(
       endpointState->appContext->transportContext, buf, len);
