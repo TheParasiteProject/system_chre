@@ -518,6 +518,7 @@ bool AppManager::HandleExtFilterConfig(
   chre::DynamicVector<chreBleGenericFilter> generic_filters;
 
   filter_extension_.Update(host_info, config, &generic_filters,
+                           &screen_on_filter_extension_results_,
                            config_response);
   if (config_response->result != CHREX_NEARBY_RESULT_OK) {
     return false;
