@@ -118,12 +118,6 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
     public static final int CHRE_EVENT_BLE_ADVERTISEMENT = 0x0350 + 1;
 
     /**
-     * CHRE BLE capabilities and filter capabilities.
-     */
-    public static final int CHRE_BLE_CAPABILITIES_SCAN = 1 << 0;
-    public static final int CHRE_BLE_FILTER_CAPABILITIES_SERVICE_DATA = 1 << 7;
-
-    /**
      * CHRE BLE test manufacturer ID.
      */
     public static final int CHRE_BLE_TEST_MANUFACTURER_ID = 0xEEEE;
@@ -629,7 +623,8 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
      * Returns true if the required BLE capabilities and filter capabilities exist, otherwise
      * returns false.
      */
-    public boolean doNecessaryBleCapabilitiesExist() throws Exception {
+    public boolean doNecessaryBleCapabilitiesExist(
+                int requiredCapabilities, int requiredFilterCapabilities)throws Exception {
         if (mBluetoothLeScanner == null) {
             return false;
         }
@@ -637,15 +632,23 @@ public class ContextHubBleTestExecutor extends ContextHubChreApiTestExecutor {
         ChreApiTest.Capabilities capabilitiesResponse =
                 ChreApiTestUtil.callUnaryRpcMethodSync(getRpcClient(),
                         "chre.rpc.ChreApiTestService.ChreBleGetCapabilities");
+
         int capabilities = capabilitiesResponse.getCapabilities();
-        if ((capabilities & CHRE_BLE_CAPABILITIES_SCAN) != 0) {
+        Log.d(TAG, String.format("CHRE Capabilitites = 0x%08X, Required = 0x%08X",
+                                    capabilities, requiredCapabilities));
+        if ((capabilities & requiredCapabilities) != requiredCapabilities) {
+            return false;
+        }
+        if (requiredFilterCapabilities != 0) {
             ChreApiTest.Capabilities filterCapabilitiesResponse =
                     ChreApiTestUtil.callUnaryRpcMethodSync(getRpcClient(),
                             "chre.rpc.ChreApiTestService.ChreBleGetFilterCapabilities");
             int filterCapabilities = filterCapabilitiesResponse.getCapabilities();
-            return (filterCapabilities & CHRE_BLE_FILTER_CAPABILITIES_SERVICE_DATA) != 0;
+            Log.d(TAG, String.format("CHRE FilterCapabilitites = 0x%08X, Required = 0x%08X",
+                                        filterCapabilities, requiredFilterCapabilities));
+            return (filterCapabilities & requiredFilterCapabilities) == requiredFilterCapabilities;
         }
-        return false;
+        return true;
     }
 
     /**
