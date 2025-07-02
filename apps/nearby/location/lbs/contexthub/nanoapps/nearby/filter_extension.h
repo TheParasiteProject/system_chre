@@ -28,7 +28,7 @@ struct HostEndpointInfo {
 };
 
 struct FilterExtensionResult {
-  const uint16_t end_point;
+  uint16_t end_point;
   AdvReportCache reports;
 
   // Constructs FilterExtensionResult with host end point and cache expire time.
@@ -47,6 +47,14 @@ struct FilterExtensionResult {
   FilterExtensionResult(FilterExtensionResult &&src)
       : end_point(src.end_point) {
     this->reports = std::move(src.reports);
+  }
+
+  FilterExtensionResult &operator=(FilterExtensionResult &&src) {
+    if (this != &src) {
+      end_point = src.end_point;
+      this->reports = std::move(src.reports);
+    }
+    return *this;
   }
 
   // Deconstructs FilterExtensionResult and releases all resources.
@@ -79,7 +87,7 @@ struct FilterExtensionResult {
   // Logic operator to compare host end point.
   friend bool operator!=(const FilterExtensionResult &c1,
                          const FilterExtensionResult &c2) {
-    return c1.end_point != c2.end_point;
+    return !(c1 == c2);
   }
 };
 
@@ -93,6 +101,7 @@ class FilterExtension {
       const chreHostEndpointInfo &host_info,
       const nearby_extension_ExtConfigRequest_FilterConfig &filter_config,
       chre::DynamicVector<chreBleGenericFilter> *generic_filters,
+      chre::DynamicVector<FilterExtensionResult> *screen_on_filter_results,
       nearby_extension_ExtConfigResponse *config_response);
 
   // Configures OEM service data.
@@ -131,6 +140,11 @@ class FilterExtension {
   int32_t FindOrCreateHostIndex(const chreHostEndpointInfo &host_info);
 
  private:
+  // Removes a host from host list and filter_results.
+  void RemoveHostAndFilterResults(
+      size_t host_index,
+      chre::DynamicVector<FilterExtensionResult> *filter_results);
+
   chre::DynamicVector<HostEndpointInfo> host_list_;
 };
 

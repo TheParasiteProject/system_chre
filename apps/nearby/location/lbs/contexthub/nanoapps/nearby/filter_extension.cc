@@ -11,11 +11,31 @@
 #include "chre_api/chre.h"
 #include "location/lbs/contexthub/nanoapps/nearby/nearby_extension.h"
 #include "location/lbs/contexthub/nanoapps/nearby/proto/nearby_extension.nanopb.h"
+#include "third_party/contexthub/chre/util/include/chre/util/dynamic_vector.h"
 #include "third_party/contexthub/chre/util/include/chre/util/nanoapp/log.h"
 
 #define LOG_TAG "[NEARBY][FILTER_EXTENSION]"
 
 namespace nearby {
+namespace {
+/* Adds a FilterExtensionResult (initialized by endpoint_id) to filter_results
+ * if it has not been included in filter_results.
+ * Returns the index of the entry.
+ */
+size_t AddToFilterResults(
+    const HostEndpointInfo &host,
+    chre::DynamicVector<FilterExtensionResult> *filter_results,
+    bool set_timeout = true) {
+  FilterExtensionResult result(host.host_info.hostEndpointId,
+                               host.cache_expire_ms, set_timeout);
+  size_t idx = filter_results->find(result);
+  if (filter_results->size() == idx) {
+    filter_results->push_back(std::move(result));
+  }
+  return idx;
+}
+
+}  // namespace
 
 const size_t kChreBleGenericFilterDataSize = 29;
 
@@ -26,6 +46,7 @@ void FilterExtension::Update(
     const chreHostEndpointInfo &host_info,
     const nearby_extension_ExtConfigRequest_FilterConfig &filter_config,
     chre::DynamicVector<chreBleGenericFilter> *generic_filters,
+    chre::DynamicVector<FilterExtensionResult> *screen_on_filter_results,
     nearby_extension_ExtConfigResponse *config_response) {
   LOGD("Update extension filter");
   const int32_t host_index = FindOrCreateHostIndex(host_info);
@@ -64,7 +85,8 @@ void FilterExtension::Update(
                                          &config_response->vendor_status));
   if (config_response->result != CHREX_NEARBY_RESULT_OK) {
     LOGE("Failed to config filters, result %" PRId32, config_response->result);
-    host_list_.erase(static_cast<size_t>(host_index));
+    RemoveHostAndFilterResults(static_cast<size_t>(host_index),
+                               screen_on_filter_results);
     return;
   }
   // Removes the host if both hardware and oem filters are empty.
@@ -73,8 +95,25 @@ void FilterExtension::Update(
     LOGD("Remove host: id (%d), package name (%s)",
          host.host_info.hostEndpointId,
          host.host_info.isNameValid ? host.host_info.packageName : "unknown");
-    host_list_.erase(static_cast<size_t>(host_index));
+    RemoveHostAndFilterResults(static_cast<size_t>(host_index),
+                               screen_on_filter_results);
   }
+}
+
+void FilterExtension::RemoveHostAndFilterResults(
+    size_t host_index,
+    chre::DynamicVector<FilterExtensionResult> *filter_results) {
+  if (host_index >= host_list_.size()) {
+    LOGE("Host index is out of range.");
+    return;
+  }
+  const HostEndpointInfo &host = host_list_[host_index];
+  FilterExtensionResult result(host.host_info.hostEndpointId);
+  size_t idx = filter_results->find(result);
+  if (idx < filter_results->size()) {
+    filter_results->erase(idx);
+  }
+  host_list_.erase(host_index);
 }
 
 void FilterExtension::ConfigureService(
@@ -107,23 +146,6 @@ int32_t FilterExtension::FindOrCreateHostIndex(
     return -1;
   }
   return static_cast<int32_t>(host_list_.size() - 1);
-}
-
-/* Adds a FilterExtensionResult (initialized by endpoint_id) to filter_results
- * if it has not been included in filter_results.
- * Returns the index of the entry.
- */
-size_t AddToFilterResults(
-    const HostEndpointInfo &host,
-    chre::DynamicVector<FilterExtensionResult> *filter_results,
-    bool set_timeout = true) {
-  FilterExtensionResult result(host.host_info.hostEndpointId,
-                               host.cache_expire_ms, set_timeout);
-  size_t idx = filter_results->find(result);
-  if (filter_results->size() == idx) {
-    filter_results->push_back(std::move(result));
-  }
-  return idx;
 }
 
 void FilterExtension::Match(

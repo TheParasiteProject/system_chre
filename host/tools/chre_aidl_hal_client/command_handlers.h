@@ -297,8 +297,12 @@ const std::vector<CommandInfo<HalClientCommandFunction>> kHalClientCommands{
         .numOfArgs = 0,
         .argsFormat = "",
         .usage = "Quit the connection mode.",
-        .func = [](HalClient * /*halClient*/,
-                   const std::vector<std::string> & /*cmdLine*/) { exit(0); },
+        .func =
+            [](HalClient *halClient,
+               const std::vector<std::string> & /*cmdLine*/) {
+              halClient->~HalClient();
+              exit(0);
+            },
     },
 
     {
