@@ -23,6 +23,21 @@
 
 namespace chre {
 
+namespace {
+
+struct socketEventData {
+  uint64_t socketId;
+  SocketEvent event;
+};
+
+struct socketPacketData {
+  void *data;
+  uint16_t length;
+  chreBleSocketPacketFreeFunction *freeCallback;
+};
+
+}  // namespace
+
 chreError BleSocketManager::socketConnected(
     const BleL2capCocSocketData &socketData) {
   LOGI("socketConnected request for endpointId: %" PRIx64 " socketId: %" PRIx64,
@@ -49,6 +64,7 @@ chreError BleSocketManager::socketConnected(
            socketData.endpointId, socketData.socketId);
       error = CHRE_ERROR_DESTINATION_NOT_FOUND;
     } else {
+      btSocket->setNanoappInstanceId(targetInstanceId);
       // TODO(b/425747779): Populate BT socket name
       chreBleSocketConnectionEvent event = {
           .socketId = socketData.socketId,
@@ -87,18 +103,76 @@ bool BleSocketManager::acceptBleSocket(uint64_t socketId) {
 int32_t BleSocketManager::sendBleSocketPacket(
     uint64_t socketId, const void *data, uint16_t length,
     chreBleSocketPacketFreeFunction *freeCallback) {
-  PlatformBtSocket *btSocket = mBtSockets.find(
-      [](PlatformBtSocket *btSocket, void *data) {
-        uint64_t socketId = *(static_cast<uint64_t *>(data));
-        return (btSocket->getId() == socketId);
-      },
-      &socketId);
+  PlatformBtSocket *btSocket = findPlatformBtSocket(socketId);
   if (btSocket == nullptr) {
     LOGE("BT socketId %" PRIu64 " not found", socketId);
     freeCallback(const_cast<void *>(data), length);
     return CHRE_BLE_SOCKET_SEND_STATUS_FAILURE;
   }
   return btSocket->sendSocketPacket(data, length, freeCallback);
+}
+
+void BleSocketManager::freeSocketPacket(
+    void *data, uint16_t length,
+    chreBleSocketPacketFreeFunction *freeCallback) {
+  auto packetData = MakeUnique<socketPacketData>();
+  packetData->data = data;
+  packetData->length = length;
+  packetData->freeCallback = freeCallback;
+
+  auto callback = [](SystemCallbackType,
+                     UniquePtr<socketPacketData> &&packetData) {
+    packetData->freeCallback(packetData->data, packetData->length);
+  };
+
+  EventLoopManagerSingleton::get()->deferCallback(
+      SystemCallbackType::BleSocketFreePacketEvent, std::move(packetData),
+      callback);
+}
+
+void BleSocketManager::handlePlatformSocketEvent(uint64_t socketId,
+                                                 SocketEvent event) {
+  auto socketEvent = MakeUnique<socketEventData>();
+
+  if (socketEvent.isNull()) {
+    LOG_OOM();
+    CHRE_ASSERT(false);
+    return;
+  }
+  socketEvent->socketId = socketId;
+  socketEvent->event = event;
+
+  auto callback = [](SystemCallbackType,
+                     UniquePtr<socketEventData> &&socketEvent) {
+    EventLoopManagerSingleton::get()
+        ->getBleSocketManager()
+        .handlePlatformSocketEventSync(socketEvent->socketId,
+                                       socketEvent->event);
+  };
+
+  EventLoopManagerSingleton::get()->deferCallback(
+      SystemCallbackType::BleSocketEvent, std::move(socketEvent), callback);
+}
+
+void BleSocketManager::handlePlatformSocketEventSync(uint64_t socketId,
+                                                     SocketEvent event) {
+  PlatformBtSocket *btSocket = findPlatformBtSocket(socketId);
+  if (btSocket == nullptr) {
+    LOGE("Received event %" PRIu32 " for missing BT socketId %" PRIu64, event,
+         socketId);
+    return;
+  }
+  // TODO(b/393485847): Handle socket closures
+  switch (event) {
+    case SocketEvent::SEND_AVAILABLE:
+      EventLoopManagerSingleton::get()->getEventLoop().postEventOrDie(
+          CHRE_EVENT_BLE_SOCKET_SEND_AVAILABLE, nullptr, nullptr,
+          btSocket->getNanoappInstanceId());
+      break;
+    default:
+      LOGE("Received unknown ble socket event");
+      break;
+  }
 }
 
 }  // namespace chre

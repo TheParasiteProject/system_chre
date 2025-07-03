@@ -21,7 +21,6 @@
 #include "chre/core/ble_l2cap_coc_socket_data.h"
 #include "chre/platform/platform_bt_socket.h"
 #include "chre/platform/platform_bt_socket_resources.h"
-#include "chre/util/fixed_size_vector.h"
 #include "chre/util/memory_pool.h"
 #include "chre_api/chre.h"
 
@@ -65,6 +64,33 @@ class BleSocketManager : public NonCopyable {
                               uint16_t length,
                               chreBleSocketPacketFreeFunction *freeCallback);
 
+  /**
+   * Handles a request to free the socket packet from the platform. Switches the
+   * context to the event loop thread before freeing the socket packet.
+   *
+   * @param data Socket packet to be freed.
+   * @param length Length of socket packet.
+   * @param freeCallback @see chreBleSocketPacketFreeFunction
+   */
+  void freeSocketPacket(void *data, uint16_t length,
+                        chreBleSocketPacketFreeFunction *freeCallback);
+
+  /**
+   * Handles a socket event originating from the platform. Switches the context
+   * to the event loop thread before processing the event with
+   * handlePlatformSocketEventSync.
+   *
+   * @param socketId Identifies socket which the event is for.
+   * @param socketEvent Socket event to be processed.
+   */
+  void handlePlatformSocketEvent(uint64_t socketId, SocketEvent socketEvent);
+
+  /**
+   * @see handlePlatformSocketEvent
+   */
+  void handlePlatformSocketEventSync(uint64_t socketId,
+                                     SocketEvent socketEvent);
+
  private:
   static constexpr uint8_t kMaxNumSockets = 3;
 
@@ -82,6 +108,15 @@ class BleSocketManager : public NonCopyable {
    * Platform resources used for creating a new BT socket.
    */
   PlatformBtSocketResources mPlatformBtSocketResources;
+
+  PlatformBtSocket *findPlatformBtSocket(uint64_t socketId) {
+    return mBtSockets.find(
+        [](PlatformBtSocket *btSocket, void *data) {
+          uint64_t socketId = *(static_cast<uint64_t *>(data));
+          return (btSocket->getId() == socketId);
+        },
+        &socketId);
+  }
 };
 
 }  // namespace chre
