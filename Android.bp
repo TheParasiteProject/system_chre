@@ -559,9 +559,11 @@ cc_test_host {
     srcs: [
         "host/common/fragmented_load_transaction.cc",
         "host/common/hal_client.cc",
+        "host/common/host_protocol_host.cc",
         "host/hal_generic/common/hal_client_manager.cc",
         "host/hal_generic/common/message_hub_manager.cc",
         "host/test/**/*_test.cc",
+        "platform/shared/host_protocol_common.cc",
     ],
     local_include_dirs: [
         "host/common/include",
@@ -577,6 +579,7 @@ cc_test_host {
         "android.hardware.contexthub-V4-ndk",
         "chre_flags_c_lib",
         "chre_host_common",
+        "chre_host_util",
         "event_logger",
         "libgmock",
         "pw_base64",
@@ -1241,12 +1244,18 @@ java_library_static {
 
 cc_library_static {
     name: "chre_host_util",
+    cpp_std: "c++20",
     vendor_available: true,
     host_supported: true,
     export_include_dirs: [
+        "external/flatbuffers/include",
         "host/common/include",
+        "platform/shared/fbs/include",
+        "platform/shared/include",
+        "util/include",
     ],
     srcs: [
+        "host/common/fbs_message_summary.cc",
         "host/common/file_stream.cc",
         "host/common/time_util.cc",
     ],
