@@ -72,8 +72,21 @@ std::unique_ptr<HalClient> HalClient::create(
   return std::unique_ptr<HalClient>(new HalClient(callback, contextHubId));
 }
 
-void HalClient::watchdogTask(const std::chrono::milliseconds timeThreshold,
-                             const std::function<void()> action) {
+void HalClient::logFatalClientCallbackTimeout(const char *funcName,
+                                              const uint64_t tid) const {
+  // If this fatal error is triggered, there is an issue in the client code (not
+  // HalClient itself). Since these callbacks block the Context Hub HAL, they
+  // must return quickly, or they may block other clients from making progress.
+  LOG_ALWAYS_FATAL("%s's callback %s() has been running for over %" PRIi64
+                   "ms and triggered watchdog. See backtrace of tid %" PRIu64
+                   " for the root cause",
+                   mClientName.c_str(), funcName,
+                   static_cast<uint64_t>(kWatchdogThreshold.count()), tid);
+}
+
+void HalClient::watchdogTask(
+    const std::chrono::milliseconds timeThreshold,
+    const std::function<void(const char *funcName, uint64_t tid)> action) {
   int64_t lastTimestamp = 0;
   int64_t timeElapsedMs = 0;
   bool shouldTriggerWatchdog = false;
@@ -94,16 +107,11 @@ void HalClient::watchdogTask(const std::chrono::milliseconds timeThreshold,
       shouldTriggerWatchdog = mCallbackTimestamp == lastTimestamp &&
                               timeElapsedMs >= timeThreshold.count();
       if (shouldTriggerWatchdog) {
-        LOGE("%s's callback %s has been running for over %" PRIi64
-             "ms. Triggering watchdog",
-             mClientName.c_str(), mCallbackFunctionName, timeElapsedMs);
+        action(mCallbackFunctionName, mCallbackThreadId);
       }
       lastTimestamp = mCallbackTimestamp;
     }
 
-    if (shouldTriggerWatchdog) {
-      action();
-    }
     std::this_thread::sleep_for(kWatchdogSleepInterval);
   }
 }
@@ -115,8 +123,11 @@ bool HalClient::connect() {
   if (abort_if_client_callback_is_stuck() && result) {
     std::lock_guard lock(mWatchdogCreationMutex);
     if (!mWatchdogTask.joinable()) {
-      mWatchdogTask = std::thread(&HalClient::watchdogTask, this,
-                                  kWatchdogThreshold, [] { std::abort(); });
+      mWatchdogTask =
+          std::thread(&HalClient::watchdogTask, this, kWatchdogThreshold,
+                      [&](const char *funcName, const uint64_t tid) {
+                        logFatalClientCallbackTimeout(funcName, tid);
+                      });
     }
   }
   return result;

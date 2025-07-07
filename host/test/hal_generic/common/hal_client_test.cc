@@ -74,8 +74,9 @@ class HalClientForTest : public HalClient {
     return mCallback.get();
   }
 
-  void runWatchdogTask(std::chrono::milliseconds timeThreshold,
-                       std::function<void()> action) {
+  void runWatchdogTask(
+      std::chrono::milliseconds timeThreshold,
+      std::function<void(const char *funcName, uint64_t tid)> action) {
     watchdogTask(timeThreshold, std::move(action));
   }
 
@@ -83,8 +84,9 @@ class HalClientForTest : public HalClient {
     updateWatchdogSnapshot("funcName", elapsedRealtime());
   }
 
-  void launchWatchdogTask(std::chrono::milliseconds timeThreshold,
-                          std::function<void()> action) {
+  void launchWatchdogTask(
+      std::chrono::milliseconds timeThreshold,
+      std::function<void(const char *funcName, uint64_t tid)> action) {
     std::lock_guard lock(mWatchdogCreationMutex);
     mWatchdogTask = std::thread(&HalClientForTest::runWatchdogTask, this,
                                 timeThreshold, action);
@@ -250,7 +252,9 @@ TEST(HalClientTest, WatchdogMonitoring) {
       std::vector<HostEndpointId>{kEndpointId, kEndpointId + 1});
 
   std::atomic_bool isTriggered = false;
-  halClientForTest->launchWatchdogTask(kTimeout, [&] { isTriggered = true; });
+  halClientForTest->launchWatchdogTask(
+      kTimeout,
+      [&](const char * /*funcName*/, uint64_t /*tid*/) { isTriggered = true; });
 
   // Keep updating timestamp in the following kTimeout + 1s such that action()
   // shouldn't be triggered.
@@ -271,7 +275,9 @@ TEST(HalClientTest, WatchdogTakeAction) {
       std::vector<HostEndpointId>{kEndpointId, kEndpointId + 1});
 
   std::atomic_bool isTriggered = false;
-  halClientForTest->launchWatchdogTask(kTimeout, [&] { isTriggered = true; });
+  halClientForTest->launchWatchdogTask(
+      kTimeout,
+      [&](const char * /*funcName*/, uint64_t /*tid*/) { isTriggered = true; });
 
   // Update timestamp to be non-zero and leave it there to trigger the action.
   halClientForTest->updateTimestamp();

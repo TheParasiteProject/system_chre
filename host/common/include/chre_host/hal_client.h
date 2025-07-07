@@ -30,6 +30,7 @@
 #include <aidl/android/hardware/contexthub/IContextHubCallback.h>
 #include <aidl/android/hardware/contexthub/NanoappBinary.h>
 #include <android-base/thread_annotations.h>
+#include <android-base/threads.h>
 #include <android/binder_process.h>
 #include <utils/SystemClock.h>
 
@@ -231,7 +232,10 @@ class HalClient {
    * @brief Callback interface for asynchronous communication with the CHRE HAL.
    *
    * Actual implementations of interface IContextHubCallback are provided by the
-   * host process using @code HalClient.
+   * host clients using @code HalClient. Because IContextHubCallback is NOT
+   * oneway, a client must make sure these callbacks return quickly, otherwise
+   * they may block other clients from running their callbacks. A watchdog is
+   * launched to enforce this requirement once ContextHub HAL is connected.
    */
   class HalClientCallback : public BnContextHubCallback {
    public:
@@ -376,14 +380,18 @@ class HalClient {
    * @param timeThreshold time threshold to trigger the action.
    * @param action action to take when the timeThreshold is triggered.
    */
-  void watchdogTask(std::chrono::milliseconds timeThreshold,
-                    std::function<void()> action);
+  void watchdogTask(
+      std::chrono::milliseconds timeThreshold,
+      std::function<void(const char *funcName, uint64_t tid)> action);
 
   void updateWatchdogSnapshot(const char *funcName, const int64_t timeMs) {
     std::lock_guard lock(mWatchdogMutex);
     mCallbackFunctionName = funcName;
     mCallbackTimestamp = timeMs;
+    mCallbackThreadId = timeMs != 0 ? base::GetThreadId() : 0;
   }
+
+  void logFatalClientCallbackTimeout(const char *funcName, uint64_t tid) const;
 
   // The mutex guarding the construction and destruction of the watchdog.
   // Because it's possible that a single HalClient instance is shared among
@@ -404,6 +412,8 @@ class HalClient {
   int64_t mCallbackTimestamp GUARDED_BY(mWatchdogMutex) = 0;
   // Name of the callback function triggering the watchdog.
   const char *mCallbackFunctionName GUARDED_BY(mWatchdogMutex) = nullptr;
+  // Thread id of the callback.
+  uint64_t mCallbackThreadId GUARDED_BY(mWatchdogMutex) = 0;
 
   // Multi-contextHub is not supported at this moment.
   int32_t mContextHubId;
