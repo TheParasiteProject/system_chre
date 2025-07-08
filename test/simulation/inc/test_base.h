@@ -28,6 +28,7 @@
 #include "chre/platform/system_timer.h"
 #include "chre/util/system/message_router.h"
 #include "chre/util/time.h"
+#include "mock_bt_offload.h"
 #include "test_event_queue.h"
 
 #include "pw_bluetooth_proxy/proxy_host.h"
@@ -131,6 +132,7 @@ class TestBase : public testing::Test {
   std::thread mChreThread;
   SystemTimer mSystemTimer;
   message::MessageRouter::MessageHub mChreMessageHub;
+  MockBtOffload mMockBtOffload;
   std::optional<pw::bluetooth::proxy::ProxyHost> mProxyHost;
 };
 
