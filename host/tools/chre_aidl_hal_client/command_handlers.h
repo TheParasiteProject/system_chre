@@ -391,8 +391,8 @@ class CommandHelper {
     auto cmdInfoItor =
         std::ranges::find_if(supportedCommands.begin(), supportedCommands.end(),
                              [&](const CommandInfo<FuncType> &cmdInfo) {
-                               return cmdInfo.cmd == cmdLine[0] &&
-                                      cmdInfo.numOfArgs == cmdLine.size() - 1;
+                               return cmdInfo.numOfArgs == cmdLine.size() - 1 &&
+                                      cmdInfo.cmd == cmdLine[0];
                              });
     return cmdInfoItor != supportedCommands.end() ? cmdInfoItor->func : nullptr;
   }
