@@ -957,6 +957,7 @@ cc_test_host {
     header_libs: [
         "emboss_runtime_headers",
         "pw_bluetooth_emboss_group",
+        "pw_bluetooth_emboss_util_include_dirs",
     ],
     static_libs: [
         "chre_linux",
