@@ -24,6 +24,10 @@
 namespace android::chre {
 
 namespace {
+
+using testing::HasSubstr;
+using testing::Not;
+
 constexpr size_t kQueueCapacity = 3;
 
 // Define a test struct that is printable
@@ -37,60 +41,47 @@ struct MyTestElement {
 };
 }  // namespace
 
-// Test fixture for ConcurrentFixedCapacityQueue
-class ConcurrentFixedCapacityQueueTest : public testing::Test {
- protected:
-  // Setup (called before each test)
-  void SetUp() override {
-    mQueue = std::make_unique<ConcurrentFixedCapacityQueue<MyTestElement>>(
-        kQueueCapacity);
-  }
+TEST(ConcurrentFixedCapacityQueueTest, PushAndPop) {
+  ConcurrentFixedCapacityQueue<MyTestElement> queue(kQueueCapacity);
+  queue.push({1});
+  queue.push({2});
+  ASSERT_EQ(queue.size(), 2);
 
-  // Tear down (called after each test)
-  void TearDown() override {
-    mQueue.reset();
-  }
+  queue.pop();
+  ASSERT_EQ(queue.size(), 1);
 
-  std::unique_ptr<ConcurrentFixedCapacityQueue<MyTestElement>> mQueue;
-};
+  queue.pop();
+  ASSERT_EQ(queue.size(), 0);
 
-TEST_F(ConcurrentFixedCapacityQueueTest, PushAndPop) {
-  mQueue->push({1});
-  mQueue->push({2});
-  ASSERT_EQ(mQueue->size(), 2);
-
-  mQueue->pop();
-  ASSERT_EQ(mQueue->size(), 1);
-
-  mQueue->pop();
-  ASSERT_EQ(mQueue->size(), 0);
-
-  mQueue->pop();
-  ASSERT_EQ(mQueue->size(), 0);
+  queue.pop();
+  ASSERT_EQ(queue.size(), 0);
 }
 
-TEST_F(ConcurrentFixedCapacityQueueTest, OverPushed) {
+TEST(ConcurrentFixedCapacityQueueTest, OverPushed) {
+  ConcurrentFixedCapacityQueue<MyTestElement> queue(kQueueCapacity);
   for (int i = 1; i <= kQueueCapacity + 2; i++) {
-    mQueue->push({i});
+    queue.push({i});
   }
 
-  ASSERT_EQ(mQueue->size(), kQueueCapacity);
+  ASSERT_EQ(queue.size(), kQueueCapacity);
 
-  std::string queue_content = mQueue->toString();
+  std::string queue_content = queue.toString();
   std::string elementMustHave = MyTestElement(kQueueCapacity + 2).toString();
   // Elements purged out:
-  ASSERT_EQ(queue_content.find("[1]"), std::string::npos);
-  ASSERT_EQ(queue_content.find("[2]"), std::string::npos);
+  EXPECT_THAT(queue_content, Not(HasSubstr("[1]")));
+  EXPECT_THAT(queue_content, Not(HasSubstr("[2]")));
   // Element must have:
-  ASSERT_NE(queue_content.find(elementMustHave), std::string::npos);
+  EXPECT_THAT(queue_content, HasSubstr(elementMustHave));
 }
 
-TEST_F(ConcurrentFixedCapacityQueueTest, EmptyQueue) {
-  ASSERT_EQ(mQueue->size(), 0);
-  ASSERT_EQ(mQueue->toString(), "[EMPTY]\n");
+TEST(ConcurrentFixedCapacityQueueTest, EmptyQueue) {
+  ConcurrentFixedCapacityQueue<MyTestElement> queue(kQueueCapacity);
+  ASSERT_EQ(queue.size(), 0);
+  ASSERT_EQ(queue.toString(), "[EMPTY]\n");
 }
 
-TEST_F(ConcurrentFixedCapacityQueueTest, MultipleThreadsPush) {
+TEST(ConcurrentFixedCapacityQueueTest, MultipleThreadsPush) {
+  ConcurrentFixedCapacityQueue<MyTestElement> queue(kQueueCapacity);
   constexpr int kNumThreads = 10;
   constexpr int kElementsPerThread = 100;
 
@@ -99,7 +90,7 @@ TEST_F(ConcurrentFixedCapacityQueueTest, MultipleThreadsPush) {
   for (int i = 0; i < kNumThreads; ++i) {
     threads.emplace_back([&] {
       for (int j = 0; j < kElementsPerThread; ++j) {
-        mQueue->push({i * kElementsPerThread + j});
+        queue.push({i * kElementsPerThread + j});
       }
     });
   }
@@ -109,10 +100,11 @@ TEST_F(ConcurrentFixedCapacityQueueTest, MultipleThreadsPush) {
   }
 
   // The queue should have at most the capacity size elements
-  ASSERT_LE(mQueue->size(), kQueueCapacity);
+  ASSERT_LE(queue.size(), kQueueCapacity);
 }
 
-TEST_F(ConcurrentFixedCapacityQueueTest, MultipleThreadsPushAndPop) {
+TEST(ConcurrentFixedCapacityQueueTest, MultipleThreadsPushAndPop) {
+  ConcurrentFixedCapacityQueue<MyTestElement> queue(kQueueCapacity);
   constexpr int kNumThreads = 10;
   constexpr int kElementsPerThread = 100;
 
@@ -121,8 +113,8 @@ TEST_F(ConcurrentFixedCapacityQueueTest, MultipleThreadsPushAndPop) {
   for (int i = 0; i < kNumThreads; ++i) {
     threads.emplace_back([&] {
       for (int j = 0; j < kElementsPerThread; ++j) {
-        mQueue->push({i * kElementsPerThread + j});
-        mQueue->pop();
+        queue.push({i * kElementsPerThread + j});
+        queue.pop();
       }
     });
   }
@@ -131,7 +123,7 @@ TEST_F(ConcurrentFixedCapacityQueueTest, MultipleThreadsPushAndPop) {
     thread.join();
   }
 
-  // Check that the queue is not holding more than the capacity
-  ASSERT_LE(mQueue->size(), kQueueCapacity);
+  // The queue should have at most the capacity size elements
+  ASSERT_LE(queue.size(), kQueueCapacity);
 }
 }  // namespace android::chre
