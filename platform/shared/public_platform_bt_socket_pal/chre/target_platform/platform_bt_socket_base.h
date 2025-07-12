@@ -57,7 +57,11 @@ class PlatformBtSocketBase {
 
   static constexpr size_t kRxMultiBufMetaDataSize = 256;
 
-  static constexpr size_t kTxMultiBufMetaDataSize = 256;
+  // TODO(b/430672746): This is 5 * the metadata needed for a single multibuf
+  // based on the hard coded tx queue size for a pigweed L2capChannel. When the
+  // queue size becomes configurable (or multibuf metadata size is reduced),
+  // consider making this value smaller.
+  static constexpr size_t kTxMultiBufMetaDataSize = 5 * 256;
 
   std::array<std::byte, kRxMultiBufAreaSize> mRxMultibufArea{};
 

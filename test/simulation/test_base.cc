@@ -69,12 +69,11 @@ void TestBase::SetUp() {
   chre::PlatformLogSingleton::init();
   TaskManagerSingleton::init();
   TestEventQueueSingleton::init();
-  // TODO(b/425729398): Add mocking to verify ProxyHost callbacks for BLE
-  // socket simulation tests.
-  mProxyHost.emplace(/*send_to_host_fn=*/[](H4PacketWithHci &&) {},
-                     /*send_to_controller_fn=*/[](H4PacketWithH4 &&) {},
-                     /*le_acl_credits_to_reserve=*/0,
-                     /*br_edr_acl_credits_to_reserve=*/0);
+  mProxyHost.emplace(
+      pw::bind_member<&MockBtOffload::sendToHost>(&mMockBtOffload),
+      pw::bind_member<&MockBtOffload::sendToController>(&mMockBtOffload),
+      /*le_acl_credits_to_reserve=*/2,
+      /*br_edr_acl_credits_to_reserve=*/0);
 
   initBleSocketManager(mProxyHost.value());
   chre::initCommon();
