@@ -217,6 +217,8 @@ void AppManager::UpdateBleScanState() {
     ble_scanner_.Restart();
   } else {
     ble_scanner_.Stop();
+    // Clear the advertise report cache when the scan is stopped.
+    adv_reports_cache_.Clear();
   }
 }
 
