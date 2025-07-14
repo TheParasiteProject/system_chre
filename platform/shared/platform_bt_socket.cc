@@ -20,6 +20,7 @@
 #include "chre/core/event_loop_manager.h"
 #include "chre/platform/log.h"
 #include "chre/platform/shared/memory.h"
+#include "chre/util/macros.h"
 #include "chre/util/unique_ptr.h"
 #include "pw_multibuf/from_span.h"
 #include "pw_status/status.h"
@@ -27,9 +28,6 @@
 namespace chre {
 
 namespace {
-
-// TODO(b/393485754): determine correct number of credits
-constexpr uint16_t kRxAdditionalCredits = 0xFFFF;
 
 SocketEvent convertPwSocketEventToChre(
     pw::bluetooth::proxy::L2capChannelEvent event) {
@@ -45,12 +43,14 @@ SocketEvent convertPwSocketEventToChre(
 
 PlatformBtSocketBase::PlatformBtSocketBase(
     const BleL2capCocSocketData &socketData,
-    PlatformBtSocketResources &platformBtSocketResources) {
+    PlatformBtSocketResources &platformBtSocketResources)
+    : mId(socketData.socketId) {
   pw::bluetooth::proxy::L2capCoc::CocConfig pwRxConfig = {
       .cid = socketData.rxConfig.cid,
       .mtu = socketData.rxConfig.mtu,
       .mps = socketData.rxConfig.mps,
-      .credits = kRxAdditionalCredits,
+      .credits = static_cast<uint16_t>(
+          MIN(kMaxRxMultibufs, kRxMultiBufAreaSize / socketData.rxConfig.mps)),
   };
   pw::bluetooth::proxy::L2capCoc::CocConfig pwTxConfig = {
       .cid = socketData.txConfig.cid,
@@ -85,16 +85,62 @@ PlatformBtSocketBase::PlatformBtSocketBase(
 
   pw::Result<pw::bluetooth::proxy::L2capCoc> result =
       platformBtSocketResources.getProxyHost().AcquireL2capCoc(
-          mSimpleAllocator, socketData.connectionHandle, pwRxConfig, pwTxConfig,
-          [this](pw::multibuf::MultiBuf &&payload) {
-            handleSocketData(std::move(payload));
-          },
+          mRxSimpleAllocator, socketData.connectionHandle, pwRxConfig,
+          pwTxConfig,
+          pw::bind_member<&PlatformBtSocketBase::handleRxSocketPacket>(this),
           eventCallback);
   if (!result.ok()) {
     LOGE("AcquireL2capCoc failed: %s", result.status().str());
     return;
   }
   mL2capCoc.emplace(std::move(result.value()));
+}
+
+PlatformBtSocket::~PlatformBtSocket() {
+  // The L2CAP COC channel must be destroyed first to avoid the race condition
+  // in which the L2CAP COC channel receives data and attempts to use the
+  // receive callback from an Rx thread while the socket is being destroyed by
+  // CHRE's event loop thread. Pigweed's L2capChannelManager uses thread
+  // protection to ensure that data cannot be sent via the receive callback
+  // after the L2CAP channel has been destroyed.
+  mL2capCoc.reset();
+}
+
+void PlatformBtSocketBase::handleRxSocketPacket(
+    pw::multibuf::MultiBuf &&payload) {
+  std::optional<pw::ConstByteSpan> packet = payload.ContiguousSpan();
+  CHRE_ASSERT(packet.has_value());
+  {
+    LockGuard<Mutex> lockGuard(mRxSocketPacketsMutex);
+    CHRE_ASSERT(mRxSocketPackets.push(std::move(payload)));
+  }
+
+  /**
+   * NOTE: handlePlatformSocketPacket() adds an event to CHRE's event
+   * queue. We call forceDramAccess after adding this event to CHRE's event
+   * queue to avoid the race condition in which forceDramAccess() is called and
+   * CHRE's event queue empties, triggering a call to removeDramAccessVote()
+   * right before this event is enqueued.
+   *
+   * TODO(b/429237573): Support enqueueing high power events on CHRE's event
+   * queue and remove forceDramAccess call.
+   */
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handlePlatformSocketPacket(
+          mId, reinterpret_cast<const uint8_t *>(packet->data()),
+          static_cast<uint16_t>(packet->size()));
+
+  forceDramAccess();
+}
+
+void PlatformBtSocket::freeReceivedSocketPacket() {
+  LockGuard<Mutex> lockGuard(mRxSocketPacketsMutex);
+  mRxSocketPackets.pop();
+}
+
+uint64_t PlatformBtSocket::getId() {
+  return mId;
 }
 
 bool PlatformBtSocket::isInitialized() {

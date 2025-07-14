@@ -40,8 +40,9 @@ class PlatformBtSocket : public PlatformBtSocketBase {
   PlatformBtSocket(const BleL2capCocSocketData &socketData,
                    PlatformBtSocketResources &platformBtSocketResources)
       : PlatformBtSocketBase(socketData, platformBtSocketResources),
-        mId(socketData.socketId),
         mHostClientId(socketData.hostClientId) {}
+
+  ~PlatformBtSocket();
 
   // Delete the copy constructor
   PlatformBtSocket(const PlatformBtSocket &) = delete;
@@ -60,9 +61,7 @@ class PlatformBtSocket : public PlatformBtSocketBase {
     return mHostClientId;
   }
 
-  uint64_t getId() {
-    return mId;
-  }
+  uint64_t getId();
 
   uint16_t getNanoappInstanceId() {
     return mInstanceId;
@@ -82,12 +81,12 @@ class PlatformBtSocket : public PlatformBtSocketBase {
   int32_t sendSocketPacket(const void *data, uint16_t length,
                            chreBleSocketPacketFreeFunction *freeCallback);
 
-  // void handleSocketEventSync(uint32_t event);
+  // Frees a socket packet after it has been received by the nanoapp.
+  void freeReceivedSocketPacket();
 
  private:
-  uint64_t mId;
   uint16_t mInstanceId = 0;
-  uint16_t mHostClientId;
+  uint16_t mHostClientId = 0;
   bool mSocketAccepted = false;
 };
 
