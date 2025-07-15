@@ -66,7 +66,7 @@ class ConcurrentFixedCapacityQueue {
     }
   }
 
-  size_t size() {
+  [[nodiscard]] size_t size() {
     std::lock_guard lock(mLock);
     return mQueue.size();
   }

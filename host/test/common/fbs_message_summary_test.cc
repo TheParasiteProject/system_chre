@@ -22,6 +22,8 @@
 
 namespace android::chre {
 
+using testing::HasSubstr;
+
 TEST(FbsMessageSummaryTest, DefaultConstructor) {
   const FbsMessageSummary summary;
   ASSERT_EQ(summary.toString(), "[EMPTY]");
@@ -35,7 +37,7 @@ TEST(FbsMessageSummaryTest, SetProcessingTime) {
                                         builder.GetSize())
           .setProcessingTime(100)
           .toString();
-  ASSERT_THAT(summaryString, ::testing::HasSubstr("processingTime=100ms"));
+  ASSERT_THAT(summaryString, HasSubstr("processingTime=100ms"));
 }
 
 TEST(FbsMessageSummaryTest, SetError) {
@@ -47,7 +49,7 @@ TEST(FbsMessageSummaryTest, SetError) {
           .setError("Test Error")
           .toString();
 
-  ASSERT_THAT(summaryString, ::testing::HasSubstr("error=Test Error"));
+  ASSERT_THAT(summaryString, HasSubstr("error=Test Error"));
 }
 
 TEST(FbsMessageSummaryTest, FromRawMessageValidMessage) {
@@ -58,7 +60,7 @@ TEST(FbsMessageSummaryTest, FromRawMessageValidMessage) {
                                         builder.GetSize())
           .toString();
   ASSERT_NE(summaryString, "[EMPTY]");
-  ASSERT_THAT(summaryString, ::testing::HasSubstr("type=29"));
+  ASSERT_THAT(summaryString, HasSubstr("type=29"));
 }
 
 TEST(FbsMessageSummaryTest, FromRawMessageInvalidMessage) {
@@ -66,8 +68,8 @@ TEST(FbsMessageSummaryTest, FromRawMessageInvalidMessage) {
 
   const std::string summaryString =
       FbsMessageSummary::fromRawMessage(invalidMessage).toString();
-  ASSERT_THAT(summaryString, ::testing::HasSubstr("error=Invalid"));
-  ASSERT_THAT(summaryString, ::testing::HasSubstr("size=3"));
+  ASSERT_THAT(summaryString, HasSubstr("error=Invalid"));
+  ASSERT_THAT(summaryString, HasSubstr("size=3"));
 }
 
 TEST(FbsMessageSummaryTest, FromEmptyRawMessage) {
