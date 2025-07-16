@@ -215,7 +215,12 @@ DRAM_REGION_FUNCTION bool generateMessageToHost(const HostMessage *message) {
 DRAM_REGION_FUNCTION int generateHubInfoResponse(uint16_t hostClientId) {
   constexpr size_t kInitialBufferSize = 192;
 
+#ifndef CHRE_TEST_SIGNED_NAPP_ENABLED
   constexpr char kHubName[] = "CHRE on Tinysys";
+#else
+  constexpr char kHubName[] =
+      "CHRE on Tinysys. INSECURE: test signed binary supported";
+#endif
   constexpr char kVendor[] = "Google";
   constexpr char kToolchain[] =
       "Clang " STRINGIFY(__clang_major__) "." STRINGIFY(
