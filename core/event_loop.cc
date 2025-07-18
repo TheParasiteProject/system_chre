@@ -749,6 +749,14 @@ void EventLoop::unloadNanoappAtIndex(size_t index, bool nanoappStarted) {
   logDanglingResources("BLE scan", numDisabledBleScans);
 #endif  // CHRE_BLE_SUPPORT_ENABLED
 
+#ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
+  uint32_t numSocketsClosed =
+      EventLoopManagerSingleton::get()
+          ->getBleSocketManager()
+          .closeSocketsOnNanoappUnload(nanoapp.get()->getInstanceId());
+  logDanglingResources("BLE socket", numSocketsClosed);
+#endif  // CHRE_BLE_SUPPORT_ENABLED
+
 #ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
   EventLoopManagerSingleton::get()
       ->getChreMessageHubManager()

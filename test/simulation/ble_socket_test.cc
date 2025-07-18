@@ -23,6 +23,7 @@
 
 #include "chre/core/ble_l2cap_coc_socket_data.h"
 #include "chre/core/event_loop_manager.h"
+#include "chre/platform/linux/pal_ble.h"
 #include "chre_api/chre.h"
 #include "pw_bluetooth/emboss_util.h"
 #include "pw_bluetooth/hci_common.emb.h"
@@ -72,6 +73,11 @@ pw::Result<EmbossT> buildCommandResponseSuccessEvent(
 
 class BleSocketTest : public TestBase {
  public:
+  void SetUp() override {
+    TestBase::SetUp();
+    resetSocketClosureCount();
+  }
+
   void setupSocket(chreError expectedError) {
     mExpectedSocketConnectionError = expectedError;
     EventLoopManagerSingleton::get()->deferCallback(
@@ -161,6 +167,23 @@ class BleSocketTestNanoapp : public TestNanoapp {
   }
 };
 
+class BleSocketConnectApp : public BleSocketTestNanoapp {
+ public:
+  void handleEvent(uint32_t, uint16_t eventType,
+                   const void *eventData) override {
+    switch (eventType) {
+      case CHRE_EVENT_BLE_SOCKET_CONNECTION: {
+        auto *event =
+            static_cast<const struct chreBleSocketConnectionEvent *>(eventData);
+        TestEventQueueSingleton::get()->pushEvent(
+            CHRE_EVENT_BLE_SOCKET_CONNECTION, event->socketId);
+        chreBleSocketAccept(event->socketId);
+        break;
+      }
+    }
+  }
+};
+
 class BleSocketConnectAndDisconnectApp : public BleSocketTestNanoapp {
  public:
   void handleEvent(uint32_t, uint16_t eventType,
@@ -184,25 +207,7 @@ class BleSocketConnectAndDisconnectApp : public BleSocketTestNanoapp {
 }  // namespace
 
 TEST_F(BleSocketTest, BleSocketAcceptConnectionTest) {
-  class App : public BleSocketTestNanoapp {
-   public:
-    void handleEvent(uint32_t, uint16_t eventType,
-                     const void *eventData) override {
-      switch (eventType) {
-        case CHRE_EVENT_BLE_SOCKET_CONNECTION: {
-          auto *event =
-              static_cast<const struct chreBleSocketConnectionEvent *>(
-                  eventData);
-          TestEventQueueSingleton::get()->pushEvent(
-              CHRE_EVENT_BLE_SOCKET_CONNECTION, event->socketId);
-          chreBleSocketAccept(event->socketId);
-          break;
-        }
-      }
-    }
-  };
-
-  uint64_t appId = loadNanoapp(MakeUnique<App>());
+  uint64_t appId = loadNanoapp(MakeUnique<BleSocketConnectApp>());
 
   setupSocket(CHRE_ERROR_NONE);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
@@ -530,6 +535,7 @@ TEST_F(BleSocketTest, BleSocketInvalidRxTest) {
   mProxyHost->HandleH4HciFromController(std::move(h4Packet));
 
   waitForEvent(CHRE_EVENT_BLE_SOCKET_DISCONNECTION);
+  EXPECT_EQ(getSocketClosureCount(), 1);
 }
 
 TEST_F(BleSocketTest, BleSocketBtResetTest) {
@@ -541,6 +547,17 @@ TEST_F(BleSocketTest, BleSocketBtResetTest) {
   mProxyHost->Reset();
 
   waitForEvent(CHRE_EVENT_BLE_SOCKET_DISCONNECTION);
+  EXPECT_EQ(getSocketClosureCount(), 1);
+}
+
+TEST_F(BleSocketTest, BleSocketClosedAfterUnloadTest) {
+  uint64_t appId = loadNanoapp(MakeUnique<BleSocketConnectApp>());
+
+  setupSocket(CHRE_ERROR_NONE);
+  waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
+
+  unloadNanoapp(appId);
+  EXPECT_EQ(getSocketClosureCount(), 1);
 }
 
 }  // namespace chre

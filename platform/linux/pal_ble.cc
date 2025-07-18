@@ -38,6 +38,7 @@ const struct chrePalBleCallbacks *gCallbacks = nullptr;
 
 bool gBleEnabled = false;
 bool gDelayScanStart = false;
+uint32_t gSocketClosureCount = 0;
 
 std::mutex gBatchMutex;
 std::vector<struct chreBleAdvertisementEvent *> gBatchedAdEvents;
@@ -240,18 +241,6 @@ bool chrePalBleApiOpen(const struct chrePalSystemApi *systemApi,
 
 }  // anonymous namespace
 
-bool chrePalIsBleEnabled() {
-  return gBleEnabled;
-}
-
-void delayBleScanStart(bool delay) {
-  gDelayScanStart = delay;
-}
-
-bool startBleScan() {
-  return startScan();
-}
-
 const struct chrePalBleApi *chrePalBleGetApi(uint32_t requestedApiVersion) {
   static const struct chrePalBleApi kApi = {
       .moduleVersion = CHRE_PAL_BLE_API_CURRENT_VERSION,
@@ -273,3 +262,31 @@ const struct chrePalBleApi *chrePalBleGetApi(uint32_t requestedApiVersion) {
     return &kApi;
   }
 }
+
+namespace chre {
+
+bool chrePalIsBleEnabled() {
+  return gBleEnabled;
+}
+
+void delayBleScanStart(bool delay) {
+  gDelayScanStart = delay;
+}
+
+bool startBleScan() {
+  return startScan();
+}
+
+void resetSocketClosureCount() {
+  gSocketClosureCount = 0;
+}
+
+void incrementSocketClosureCount() {
+  gSocketClosureCount++;
+}
+
+uint32_t getSocketClosureCount() {
+  return gSocketClosureCount;
+}
+
+}  // namespace chre

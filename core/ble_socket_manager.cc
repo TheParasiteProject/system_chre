@@ -206,13 +206,15 @@ void BleSocketManager::handlePlatformSocketEventSync(uint64_t socketId,
 }
 
 void BleSocketManager::closeBtSocket(PlatformBtSocket *btSocket,
-                                     const char *reason) {
+                                     const char *reason, bool notifyNanoapp) {
   EventLoopManagerSingleton::get()->getHostCommsManager().sendBtSocketClose(
       btSocket->getId(), reason);
-  chreBleSocketDisconnectionEvent event = {.socketId = btSocket->getId()};
-  EventLoopManagerSingleton::get()->getEventLoop().distributeEventSync(
-      CHRE_EVENT_BLE_SOCKET_DISCONNECTION, &event,
-      btSocket->getNanoappInstanceId());
+  if (notifyNanoapp) {
+    chreBleSocketDisconnectionEvent event = {.socketId = btSocket->getId()};
+    EventLoopManagerSingleton::get()->getEventLoop().distributeEventSync(
+        CHRE_EVENT_BLE_SOCKET_DISCONNECTION, &event,
+        btSocket->getNanoappInstanceId());
+  }
   mBtSockets.deallocate(btSocket);
 }
 
@@ -247,6 +249,28 @@ void BleSocketManager::handlePlatformSocketPacketSync(
   EventLoopManagerSingleton::get()->getEventLoop().distributeEventSync(
       CHRE_EVENT_BLE_SOCKET_PACKET, event, btSocket->getNanoappInstanceId());
   btSocket->freeReceivedSocketPacket();
+}
+
+uint32_t BleSocketManager::closeSocketsOnNanoappUnload(
+    uint16_t nanoappInstanceId) {
+  uint32_t numSocketsClosed = 0;
+
+  while (!mBtSockets.empty()) {
+    PlatformBtSocket *btSocket = mBtSockets.find(
+        [](PlatformBtSocket *btSocket, void *data) {
+          uint64_t nanoappInstanceId = *(static_cast<uint64_t *>(data));
+          return (btSocket->getNanoappInstanceId() == nanoappInstanceId);
+        },
+        &nanoappInstanceId);
+    if (btSocket == nullptr) {
+      break;
+    }
+    numSocketsClosed++;
+    closeBtSocket(btSocket, "Nanoapp unloaded",
+                  /*notifyNanoapp=*/false);
+  }
+
+  return numSocketsClosed;
 }
 
 }  // namespace chre

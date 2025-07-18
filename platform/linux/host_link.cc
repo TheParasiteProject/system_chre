@@ -15,7 +15,9 @@
  */
 
 #include "chre/platform/host_link.h"
+
 #include "chre/core/event_loop_manager.h"
+#include "chre/platform/linux/pal_ble.h"
 
 namespace chre {
 
@@ -40,7 +42,9 @@ bool HostLink::sendMessageDeliveryStatus(uint32_t /* messageSequenceNumber */,
 
 #ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
 void HostLink::sendBtSocketClose(uint64_t /*socketId*/,
-                                 const char * /*reason*/) {}
+                                 const char * /*reason*/) {
+  incrementSocketClosureCount();
+}
 #endif  // CHRE_BLE_SOCKET_SUPPORT_ENABLED
 
 void HostLinkBase::sendNanConfiguration(bool enable) {
