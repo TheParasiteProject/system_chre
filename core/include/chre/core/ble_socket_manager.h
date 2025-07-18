@@ -134,6 +134,14 @@ class BleSocketManager : public NonCopyable {
         },
         &socketId);
   }
+
+  /**
+   * Closes BT socket and notifies the nanoapp and BT Socket HAL.
+   *
+   * @param btSocket Socket to be closed.
+   * @param reason Closure reason.
+   */
+  void closeBtSocket(PlatformBtSocket *btSocket, const char *reason);
 };
 
 }  // namespace chre

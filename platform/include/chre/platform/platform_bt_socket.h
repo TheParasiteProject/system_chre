@@ -28,6 +28,10 @@ namespace chre {
 
 enum class SocketEvent : uint8_t {
   SEND_AVAILABLE,
+  BLUETOOTH_RESET,
+  SOCKET_CLOSED_BY_HOST,
+  RECEIVED_INVALID_PACKET,
+  OOM_TO_RECEIVE_PACKET,
   UNKNOWN,
 };
 

@@ -38,6 +38,11 @@ bool HostLink::sendMessageDeliveryStatus(uint32_t /* messageSequenceNumber */,
   return true;
 }
 
+#ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
+void HostLink::sendBtSocketClose(uint64_t /*socketId*/,
+                                 const char * /*reason*/) {}
+#endif  // CHRE_BLE_SOCKET_SUPPORT_ENABLED
+
 void HostLinkBase::sendNanConfiguration(bool enable) {
 #if defined(CHRE_WIFI_SUPPORT_ENABLED) && defined(CHRE_WIFI_NAN_SUPPORT_ENABLED)
   EventLoopManagerSingleton::get()

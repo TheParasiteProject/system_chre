@@ -23,6 +23,7 @@
 
 #include "chre/core/ble_l2cap_coc_socket_data.h"
 #include "chre/core/event_loop_manager.h"
+#include "chre_api/chre.h"
 #include "pw_bluetooth/emboss_util.h"
 #include "pw_bluetooth/hci_common.emb.h"
 #include "pw_bluetooth/hci_events.emb.h"
@@ -126,12 +127,14 @@ class BleSocketTest : public TestBase {
       pbe::AclDataFrameHeader::IntrinsicSizeInBytes() +
       pbe::FirstKFrame::MinSizeInBytes();
 
+  static constexpr uint8_t kRxMps = 200;
+
   BleL2capCocSocketData mSocketData = {
       .socketId = 1,
       .endpointId = kDefaultTestNanoappId,
       .connectionHandle = 2,
       .rxConfig =
-          L2capCocConfig{.cid = 3, .mtu = 400, .mps = 200, .credits = 2},
+          L2capCocConfig{.cid = 3, .mtu = 400, .mps = kRxMps, .credits = 2},
       .txConfig =
           L2capCocConfig{.cid = 4, .mtu = 400, .mps = 200, .credits = 2}};
 
@@ -155,6 +158,26 @@ class BleSocketTestNanoapp : public TestNanoapp {
   void end() override {
     chreUserSettingConfigureEvents(CHRE_USER_SETTING_BLE_AVAILABLE,
                                    false /* enable */);
+  }
+};
+
+class BleSocketConnectAndDisconnectApp : public BleSocketTestNanoapp {
+ public:
+  void handleEvent(uint32_t, uint16_t eventType,
+                   const void *eventData) override {
+    switch (eventType) {
+      case CHRE_EVENT_BLE_SOCKET_CONNECTION: {
+        auto *event =
+            static_cast<const struct chreBleSocketConnectionEvent *>(eventData);
+        TestEventQueueSingleton::get()->pushEvent(
+            CHRE_EVENT_BLE_SOCKET_CONNECTION, event->socketId);
+        chreBleSocketAccept(event->socketId);
+        break;
+      }
+      case CHRE_EVENT_BLE_SOCKET_DISCONNECTION:
+        TestEventQueueSingleton::get()->pushEvent(
+            CHRE_EVENT_BLE_SOCKET_DISCONNECTION);
+    }
   }
 };
 
@@ -476,6 +499,48 @@ TEST_F(BleSocketTest, BleSocketBasicReceiveTest) {
   waitForEvent(CHRE_EVENT_BLE_SOCKET_PACKET, &receiveData);
   EXPECT_TRUE(std::equal(receiveData->begin(), receiveData->end(),
                          expectedPayload.begin(), expectedPayload.end()));
+}
+
+TEST_F(BleSocketTest, BleSocketInvalidRxTest) {
+  uint64_t appId = loadNanoapp(MakeUnique<BleSocketConnectAndDisconnectApp>());
+
+  setupSocket(CHRE_ERROR_NONE);
+  waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
+
+  // Specify PDU length larger than Rx config to trigger kRxInvalid event
+  constexpr uint8_t kInvalidPduSize = kRxMps + 1;
+
+  std::array<uint8_t, kFirstKFrameOverAclMinSize + kInvalidPduSize> hciArray;
+  hciArray.fill(0);
+  pw::bluetooth::proxy::H4PacketWithHci h4Packet{pbe::H4PacketType::ACL_DATA,
+                                                 hciArray};
+
+  pw::Result<pbe::AclDataFrameWriter> acl =
+      pw::bluetooth::MakeEmbossWriter<pbe::AclDataFrameWriter>(hciArray);
+  acl->header().handle().Write(mSocketData.connectionHandle);
+  acl->data_total_length().Write(pbe::FirstKFrame::MinSizeInBytes() +
+                                 kInvalidPduSize);
+
+  pbe::FirstKFrameWriter kframe = pbe::MakeFirstKFrameView(
+      acl->payload().BackingStorage().data(), acl->data_total_length().Read());
+  kframe.pdu_length().Write(kSduLengthFieldSize + kInvalidPduSize);
+  kframe.channel_id().Write(mSocketData.rxConfig.cid);
+  kframe.sdu_length().Write(kInvalidPduSize);
+
+  mProxyHost->HandleH4HciFromController(std::move(h4Packet));
+
+  waitForEvent(CHRE_EVENT_BLE_SOCKET_DISCONNECTION);
+}
+
+TEST_F(BleSocketTest, BleSocketBtResetTest) {
+  uint64_t appId = loadNanoapp(MakeUnique<BleSocketConnectAndDisconnectApp>());
+
+  setupSocket(CHRE_ERROR_NONE);
+  waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
+
+  mProxyHost->Reset();
+
+  waitForEvent(CHRE_EVENT_BLE_SOCKET_DISCONNECTION);
 }
 
 }  // namespace chre
