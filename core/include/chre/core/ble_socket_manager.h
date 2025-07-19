@@ -91,6 +91,23 @@ class BleSocketManager : public NonCopyable {
   void handlePlatformSocketEventSync(uint64_t socketId,
                                      SocketEvent socketEvent);
 
+  /**
+   * Handles a socket packet from the platform. Switches the context to the
+   * event loop thread before processing the event with
+   * handlePlatformSocketPacketSync.
+   *
+   * @param socketId ID of the socket sending the packet.
+   * @param data Socket packet data.
+   * @param length Socket packet data length.
+   */
+  void handlePlatformSocketPacket(uint64_t socketId, const uint8_t *data,
+                                  uint16_t length);
+
+  /**
+   * @see handlePlatformSocketPacket
+   */
+  void handlePlatformSocketPacketSync(chreBleSocketPacketEvent *event);
+
  private:
   static constexpr uint8_t kMaxNumSockets = 3;
 

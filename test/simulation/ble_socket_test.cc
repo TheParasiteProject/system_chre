@@ -17,6 +17,7 @@
 #include "test_base.h"
 
 #include <array>
+#include <vector>
 
 #include "test_util.h"
 
@@ -26,6 +27,7 @@
 #include "pw_bluetooth/hci_common.emb.h"
 #include "pw_bluetooth/hci_events.emb.h"
 #include "pw_bluetooth/hci_h4.emb.h"
+#include "pw_bluetooth/l2cap_frames.emb.h"
 #include "pw_span/span.h"
 #include "pw_status/status.h"
 #include "pw_status/try.h"
@@ -34,19 +36,19 @@ namespace chre {
 
 using ::testing::_;
 
-namespace {
+namespace pbe = pw::bluetooth::emboss;
 
+namespace {
 // Populate event header and return writer of the template parameter type.
 template <typename EmbossT>
-pw::Result<EmbossT> buildEvent(pw::bluetooth::proxy::H4PacketWithHci &h4_packet,
-                               pw::bluetooth::emboss::EventCode event_code) {
+pw::Result<EmbossT> buildEvent(pw::bluetooth::proxy::H4PacketWithHci &h4Packet,
+                               pbe::EventCode event_code) {
   size_t parameter_total_size =
-      h4_packet.GetHciSpan().size() -
-      pw::bluetooth::emboss::EventHeader::IntrinsicSizeInBytes();
-  h4_packet.SetH4Type(pw::bluetooth::emboss::H4PacketType::EVENT);
+      h4Packet.GetHciSpan().size() - pbe::EventHeader::IntrinsicSizeInBytes();
+  h4Packet.SetH4Type(pbe::H4PacketType::EVENT);
 
   PW_TRY_ASSIGN(EmbossT view, pw::bluetooth::MakeEmbossWriter<EmbossT>(
-                                  h4_packet.GetHciSpan()));
+                                  h4Packet.GetHciSpan()));
 
   view.header().event_code().Write(event_code);
   view.header().parameter_total_size().Write(parameter_total_size);
@@ -58,11 +60,11 @@ pw::Result<EmbossT> buildEvent(pw::bluetooth::proxy::H4PacketWithHci &h4_packet,
 // parameter type.
 template <typename EmbossT>
 pw::Result<EmbossT> buildCommandResponseSuccessEvent(
-    pw::bluetooth::proxy::H4PacketWithHci &h4_packet,
-    pw::bluetooth::emboss::EventCode event_code) {
-  PW_TRY_ASSIGN(EmbossT view, buildEvent<EmbossT>(h4_packet, event_code));
+    pw::bluetooth::proxy::H4PacketWithHci &h4Packet,
+    pbe::EventCode event_code) {
+  PW_TRY_ASSIGN(EmbossT view, buildEvent<EmbossT>(h4Packet, event_code));
 
-  view.status().Write(pw::bluetooth::emboss::StatusCode::SUCCESS);
+  view.status().Write(pbe::StatusCode::SUCCESS);
 
   return view;
 }
@@ -84,48 +86,55 @@ class BleSocketTest : public TestBase {
         &mExpectedSocketConnectionError);
   }
 
-  // Send an LE_Read_Buffer_Size (V2) CommandComplete event to the ProxyHost so
-  // it can request the reservation of a number of LE ACL send credits.
+  // Send an LE_Read_Buffer_Size (V2) CommandComplete event to the ProxyHost
+  // so it can request the reservation of a number of LE ACL send credits.
   pw::Status sendLeReadBufferResponseFromController(
       uint8_t num_credits_to_reserve,
       uint16_t le_acl_data_packet_length = 251) {
-    using pw::bluetooth::emboss::EventCode;
-    using pw::bluetooth::emboss::LEReadBufferSizeV2CommandCompleteEventWriter;
+    using pbe::EventCode;
+    using pbe::LEReadBufferSizeV2CommandCompleteEventWriter;
 
     std::array<uint8_t,
                LEReadBufferSizeV2CommandCompleteEventWriter::SizeInBytes()>
-        hci_arr{};
-    hci_arr.fill(0);
-    pw::bluetooth::proxy::H4PacketWithHci h4_packet{
-        pw::bluetooth::emboss::H4PacketType::EVENT, hci_arr};
+        hciArray{};
+    hciArray.fill(0);
+    pw::bluetooth::proxy::H4PacketWithHci h4Packet{pbe::H4PacketType::EVENT,
+                                                   hciArray};
 
     PW_TRY_ASSIGN(LEReadBufferSizeV2CommandCompleteEventWriter view,
                   buildCommandResponseSuccessEvent<
                       LEReadBufferSizeV2CommandCompleteEventWriter>(
-                      h4_packet, EventCode::COMMAND_COMPLETE));
+                      h4Packet, EventCode::COMMAND_COMPLETE));
 
     view.command_complete().command_opcode().Write(
-        pw::bluetooth::emboss::OpCode::LE_READ_BUFFER_SIZE_V2);
+        pbe::OpCode::LE_READ_BUFFER_SIZE_V2);
     view.total_num_le_acl_data_packets().Write(num_credits_to_reserve);
     view.le_acl_data_packet_length().Write(le_acl_data_packet_length);
 
     EXPECT_TRUE(view.Ok());
 
     mProxyHost.value().HandleH4HciFromController(
-        {h4_packet.GetH4Type(), h4_packet.GetHciSpan()});
+        {h4Packet.GetH4Type(), h4Packet.GetHciSpan()});
     return pw::OkStatus();
   }
 
  protected:
+  // Size of sdu_length field in first K-frames.
+  static constexpr uint8_t kSduLengthFieldSize = 2;
+
+  static constexpr uint8_t kFirstKFrameOverAclMinSize =
+      pbe::AclDataFrameHeader::IntrinsicSizeInBytes() +
+      pbe::FirstKFrame::MinSizeInBytes();
+
   BleL2capCocSocketData mSocketData = {
       .socketId = 1,
       .endpointId = kDefaultTestNanoappId,
-      .connectionHandle = 1,
+      .connectionHandle = 2,
       .hostClientId = 1,
       .rxConfig =
-          L2capCocConfig{.cid = 1, .mtu = 400, .mps = 200, .credits = 2},
+          L2capCocConfig{.cid = 3, .mtu = 400, .mps = 200, .credits = 2},
       .txConfig =
-          L2capCocConfig{.cid = 1, .mtu = 400, .mps = 200, .credits = 2}};
+          L2capCocConfig{.cid = 4, .mtu = 400, .mps = 200, .credits = 2}};
 
   chreError mExpectedSocketConnectionError = CHRE_ERROR_NONE;
 
@@ -191,7 +200,7 @@ TEST_F(BleSocketTest, BleSocketDoNotAcceptConnectionTest) {
   setupSocket(CHRE_ERROR);
 }
 
-TEST_F(BleSocketTest, BleSocketSendTest) {
+TEST_F(BleSocketTest, BleSocketBasicSendTest) {
   CREATE_CHRE_TEST_EVENT(SOCKET_SEND, 0);
   CREATE_CHRE_TEST_EVENT(SOCKET_SEND_FREE_CALLBACK, 1);
 
@@ -402,6 +411,72 @@ TEST_F(BleSocketTest, BleSocketSendQueueFullTest) {
   // Nanoapp successfully re-sends packet
   waitForEvent(SOCKET_RETRY_SEND, &status);
   EXPECT_EQ(status, CHRE_BLE_SOCKET_SEND_STATUS_SUCCESS);
+}
+
+TEST_F(BleSocketTest, BleSocketBasicReceiveTest) {
+  class App : public BleSocketTestNanoapp {
+   public:
+    void handleEvent(uint32_t, uint16_t eventType,
+                     const void *eventData) override {
+      switch (eventType) {
+        case CHRE_EVENT_BLE_SOCKET_CONNECTION: {
+          auto *event =
+              static_cast<const struct chreBleSocketConnectionEvent *>(
+                  eventData);
+          TestEventQueueSingleton::get()->pushEvent(
+              CHRE_EVENT_BLE_SOCKET_CONNECTION, event->socketId);
+          chreBleSocketAccept(event->socketId);
+          mSocketId = event->socketId;
+          break;
+        }
+        case CHRE_EVENT_BLE_SOCKET_PACKET: {
+          auto event = static_cast<const chreBleSocketPacketEvent *>(eventData);
+          mSocketReceiveData.assign(event->data, event->data + event->length);
+          TestEventQueueSingleton::get()->pushEvent(
+              CHRE_EVENT_BLE_SOCKET_PACKET, &mSocketReceiveData);
+        }
+      }
+    }
+
+   private:
+    uint64_t mSocketId = 0;
+
+    std::vector<uint8_t> mSocketReceiveData;
+  };
+
+  uint64_t appId = loadNanoapp(MakeUnique<App>());
+
+  setupSocket(CHRE_ERROR_NONE);
+  waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
+
+  std::array<uint8_t, 3> expectedPayload = {0xAB, 0xCD, 0xEF};
+
+  std::array<uint8_t, kFirstKFrameOverAclMinSize + expectedPayload.size()>
+      hciArray;
+  hciArray.fill(0);
+  pw::bluetooth::proxy::H4PacketWithHci h4Packet{pbe::H4PacketType::ACL_DATA,
+                                                 hciArray};
+
+  pw::Result<pbe::AclDataFrameWriter> acl =
+      pw::bluetooth::MakeEmbossWriter<pbe::AclDataFrameWriter>(hciArray);
+  acl->header().handle().Write(mSocketData.connectionHandle);
+  acl->data_total_length().Write(pbe::FirstKFrame::MinSizeInBytes() +
+                                 expectedPayload.size());
+
+  pbe::FirstKFrameWriter kframe = pbe::MakeFirstKFrameView(
+      acl->payload().BackingStorage().data(), acl->data_total_length().Read());
+  kframe.pdu_length().Write(kSduLengthFieldSize + expectedPayload.size());
+  kframe.channel_id().Write(mSocketData.rxConfig.cid);
+  kframe.sdu_length().Write(expectedPayload.size());
+  std::copy(expectedPayload.begin(), expectedPayload.end(),
+            hciArray.begin() + kFirstKFrameOverAclMinSize);
+
+  mProxyHost->HandleH4HciFromController(std::move(h4Packet));
+
+  std::vector<uint8_t> *receiveData;
+  waitForEvent(CHRE_EVENT_BLE_SOCKET_PACKET, &receiveData);
+  EXPECT_TRUE(std::equal(receiveData->begin(), receiveData->end(),
+                         expectedPayload.begin(), expectedPayload.end()));
 }
 
 }  // namespace chre

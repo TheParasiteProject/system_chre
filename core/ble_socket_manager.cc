@@ -20,6 +20,7 @@
 
 #include "chre/core/event_loop_manager.h"
 #include "chre/platform/log.h"
+#include "chre_api/chre.h"
 
 namespace chre {
 
@@ -40,7 +41,7 @@ struct socketPacketData {
 
 chreError BleSocketManager::socketConnected(
     const BleL2capCocSocketData &socketData) {
-  LOGI("socketConnected request for endpointId: %" PRIx64 " socketId: %" PRIx64,
+  LOGI("socketConnected request for endpointId: %" PRIx64 " socketId: %" PRIu64,
        socketData.endpointId, socketData.socketId);
   PlatformBtSocket *btSocket =
       mBtSockets.allocate(socketData, mPlatformBtSocketResources);
@@ -158,8 +159,9 @@ void BleSocketManager::handlePlatformSocketEventSync(uint64_t socketId,
                                                      SocketEvent event) {
   PlatformBtSocket *btSocket = findPlatformBtSocket(socketId);
   if (btSocket == nullptr) {
-    LOGE("Received event %" PRIu32 " for missing BT socketId %" PRIu64, event,
-         socketId);
+    LOGW("Received event %" PRIu32
+         " for disconnected/unknown BT socketId %" PRIu64,
+         event, socketId);
     return;
   }
   // TODO(b/393485847): Handle socket closures
@@ -173,6 +175,39 @@ void BleSocketManager::handlePlatformSocketEventSync(uint64_t socketId,
       LOGE("Received unknown ble socket event");
       break;
   }
+}
+
+void BleSocketManager::handlePlatformSocketPacket(uint64_t socketId,
+                                                  const uint8_t *data,
+                                                  uint16_t length) {
+  auto packetEvent = MakeUnique<chreBleSocketPacketEvent>();
+  packetEvent->socketId = socketId;
+  packetEvent->data = data;
+  packetEvent->length = length;
+
+  auto callback = [](SystemCallbackType,
+                     UniquePtr<chreBleSocketPacketEvent> &&packetEvent) {
+    EventLoopManagerSingleton::get()
+        ->getBleSocketManager()
+        .handlePlatformSocketPacketSync(packetEvent.get());
+  };
+  EventLoopManagerSingleton::get()->deferCallback(
+      SystemCallbackType::BleSocketPacketEvent, std::move(packetEvent),
+      callback);
+}
+
+void BleSocketManager::handlePlatformSocketPacketSync(
+    chreBleSocketPacketEvent *event) {
+  PlatformBtSocket *btSocket = findPlatformBtSocket(event->socketId);
+  if (btSocket == nullptr) {
+    LOGW("Received packet for disconnected/unknown BT socketId %" PRIu64,
+         event->socketId);
+    return;
+  }
+
+  EventLoopManagerSingleton::get()->getEventLoop().distributeEventSync(
+      CHRE_EVENT_BLE_SOCKET_PACKET, event, btSocket->getNanoappInstanceId());
+  btSocket->freeReceivedSocketPacket();
 }
 
 }  // namespace chre
