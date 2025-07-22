@@ -153,7 +153,7 @@ void Nanoapp::processEvent(Event *event) {
       SystemTime::getMonotonicTime() - eventStartTime;
   uint64_t eventTimeMs = Milliseconds(eventProcessTime).getMilliseconds();
   if (Milliseconds(eventProcessTime) >= Milliseconds(100)) {
-    LOGE("Nanoapp 0x%" PRIx64 " took %" PRIu64
+    LOGW("Nanoapp 0x%" PRIx64 " took %" PRIu64
          " ms to process event type 0x%" PRIx16,
          getAppId(), eventTimeMs, event->eventType);
   }
