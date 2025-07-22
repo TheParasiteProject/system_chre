@@ -236,14 +236,13 @@ bool HostProtocolChre::decodeMessageFromHost(const void *message,
                   btSocketOpen->channelInfo());
           const char *name = getStringFromByteVector(btSocketOpen->name());
           HostMessageHandlers::handleBtSocketOpen(
-              static_cast<uint64_t>(btSocketOpen->hubId()),
+              static_cast<uint64_t>(btSocketOpen->hubId()), hostClientId,
               BleL2capCocSocketData{
                   .socketId = static_cast<uint64_t>(btSocketOpen->socketId()),
                   .endpointId =
                       static_cast<uint64_t>(btSocketOpen->endpointId()),
                   .connectionHandle = static_cast<uint16_t>(
                       btSocketOpen->aclConnectionHandle()),
-                  .hostClientId = hostClientId,
                   .rxConfig =
                       L2capCocConfig{.cid = static_cast<uint16_t>(
                                          leCocChannelInfo->localCid()),

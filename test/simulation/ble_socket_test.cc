@@ -130,7 +130,6 @@ class BleSocketTest : public TestBase {
       .socketId = 1,
       .endpointId = kDefaultTestNanoappId,
       .connectionHandle = 2,
-      .hostClientId = 1,
       .rxConfig =
           L2capCocConfig{.cid = 3, .mtu = 400, .mps = 200, .credits = 2},
       .txConfig =
