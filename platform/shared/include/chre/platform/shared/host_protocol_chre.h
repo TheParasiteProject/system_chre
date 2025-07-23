@@ -105,7 +105,7 @@ class HostMessageHandlers {
 
   static void handleNanConfigurationUpdate(bool enabled);
 
-  static void handleBtSocketOpen(uint64_t hubId,
+  static void handleBtSocketOpen(uint64_t hubId, uint16_t hostClientId,
                                  const BleL2capCocSocketData &socketData,
                                  const char *name, uint32_t psm);
 

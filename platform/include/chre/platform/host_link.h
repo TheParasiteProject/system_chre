@@ -89,6 +89,16 @@ class HostLink : public HostLinkBase, public NonCopyable {
    */
   bool sendMetricLog(uint32_t metricId, const uint8_t *encodedMetric,
                      size_t encodedMetricLen);
+
+#ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
+  /**
+   * Sends a BT socket close message to the host.
+   *
+   * @param socketId BT socket identifier
+   * @param reason Reason for closing the socket
+   */
+  void sendBtSocketClose(uint64_t socketId, const char *reason);
+#endif  // CHRE_BLE_SOCKET_SUPPORT_ENABLED
 };
 
 }  // namespace chre

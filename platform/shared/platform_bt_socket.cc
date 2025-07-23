@@ -34,7 +34,16 @@ SocketEvent convertPwSocketEventToChre(
   switch (event) {
     case pw::bluetooth::proxy::L2capChannelEvent::kWriteAvailable:
       return SocketEvent::SEND_AVAILABLE;
+    case pw::bluetooth::proxy::L2capChannelEvent::kChannelClosedByOther:
+      return SocketEvent::SOCKET_CLOSED_BY_HOST;
+    case pw::bluetooth::proxy::L2capChannelEvent::kReset:
+      return SocketEvent::BLUETOOTH_RESET;
+    case pw::bluetooth::proxy::L2capChannelEvent::kRxInvalid:
+      return SocketEvent::RECEIVED_INVALID_PACKET;
+    case pw::bluetooth::proxy::L2capChannelEvent::kRxOutOfMemory:
+      return SocketEvent::OOM_TO_RECEIVE_PACKET;
     default:
+      LOGE("Received unknown socket event from platform %" PRIu32, event);
       return SocketEvent::UNKNOWN;
   }
 }

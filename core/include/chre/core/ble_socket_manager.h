@@ -108,6 +108,14 @@ class BleSocketManager : public NonCopyable {
    */
   void handlePlatformSocketPacketSync(chreBleSocketPacketEvent *event);
 
+  /**
+   * Closes the sockets belonging to a nanoapp when it is unloaded.
+   *
+   * @param nanoappInstanceId Nanoapp being unloaded.
+   * @return number of sockets closed.
+   */
+  uint32_t closeSocketsOnNanoappUnload(uint16_t nanoappInstanceId);
+
  private:
   static constexpr uint8_t kMaxNumSockets = 3;
 
@@ -134,6 +142,16 @@ class BleSocketManager : public NonCopyable {
         },
         &socketId);
   }
+
+  /**
+   * Closes BT socket and notifies the nanoapp and BT Socket HAL.
+   *
+   * @param btSocket Socket to be closed.
+   * @param reason Closure reason.
+   * @param notifyNanoapp whether to notify the nanoapp of the closure.
+   */
+  void closeBtSocket(PlatformBtSocket *btSocket, const char *reason,
+                     bool notifyNanoapp = true);
 };
 
 }  // namespace chre

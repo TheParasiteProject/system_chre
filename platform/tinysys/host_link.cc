@@ -943,8 +943,9 @@ DRAM_REGION_FUNCTION void HostMessageHandlers::handleNanConfigurationUpdate(
 }
 
 DRAM_REGION_FUNCTION void HostMessageHandlers::handleBtSocketOpen(
-    uint64_t /* hubId */, const BleL2capCocSocketData & /* socketData */,
-    const char * /* name */, uint32_t /* psm */) {
+    uint64_t /* hubId */, uint16_t /* hostClientId */,
+    const BleL2capCocSocketData & /* socketData */, const char * /* name */,
+    uint32_t /* psm */) {
   LOGE("BT Socket offload not supported");
 }
 

@@ -19,6 +19,8 @@
 
 #include <chrono>
 
+namespace chre {
+
 /**
  * @return true if the BLE PAL is enabled.
  */
@@ -40,5 +42,13 @@ void delayBleScanStart(bool delay);
  * @return true if the scan was start successfully.
  */
 bool startBleScan();
+
+void resetSocketClosureCount();
+
+void incrementSocketClosureCount();
+
+uint32_t getSocketClosureCount();
+
+}  // namespace chre
 
 #endif  // CHRE_PLATFORM_LINUX_PAL_BLE_H_

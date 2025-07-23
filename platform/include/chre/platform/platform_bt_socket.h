@@ -28,6 +28,10 @@ namespace chre {
 
 enum class SocketEvent : uint8_t {
   SEND_AVAILABLE,
+  BLUETOOTH_RESET,
+  SOCKET_CLOSED_BY_HOST,
+  RECEIVED_INVALID_PACKET,
+  OOM_TO_RECEIVE_PACKET,
   UNKNOWN,
 };
 
@@ -39,8 +43,7 @@ class PlatformBtSocket : public PlatformBtSocketBase {
  public:
   PlatformBtSocket(const BleL2capCocSocketData &socketData,
                    PlatformBtSocketResources &platformBtSocketResources)
-      : PlatformBtSocketBase(socketData, platformBtSocketResources),
-        mHostClientId(socketData.hostClientId) {}
+      : PlatformBtSocketBase(socketData, platformBtSocketResources) {}
 
   ~PlatformBtSocket();
 
@@ -55,10 +58,6 @@ class PlatformBtSocket : public PlatformBtSocketBase {
 
   bool getSocketAccepted() {
     return mSocketAccepted;
-  }
-
-  uint16_t getHostClientId() {
-    return mHostClientId;
   }
 
   uint64_t getId();
@@ -85,8 +84,10 @@ class PlatformBtSocket : public PlatformBtSocketBase {
   void freeReceivedSocketPacket();
 
  private:
+  // Nanoapp instance ID.
   uint16_t mInstanceId = 0;
-  uint16_t mHostClientId = 0;
+
+  // Whether the nanoapp accepted the socket.
   bool mSocketAccepted = false;
 };
 
