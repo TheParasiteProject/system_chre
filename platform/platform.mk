@@ -475,6 +475,7 @@ TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/host_cpu_update.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/host_link.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/log_buffer_manager.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/memory.cc
+TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/mpu.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/nanoapp_memory_guard.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/platform_cache_management.cc
 TINYSYS_SRCS += $(CHRE_PREFIX)/platform/tinysys/platform_pal.cc
