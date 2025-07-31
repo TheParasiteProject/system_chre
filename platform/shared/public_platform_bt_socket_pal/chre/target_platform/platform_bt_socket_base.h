@@ -47,8 +47,23 @@ class PlatformBtSocketBase {
    * Callback to be invoked on Rx SDUs.
    *
    * @see pw::bluetooth::proxy::ProxyHost::AcquireL2capCoc()
+   *
+   * NOTE: this callback will not be invoked from the CHRE thread. It is
+   * expected that the caller invokes DramVoteClient::incrementDramVoteCount()
+   * and DramVoteClient::decrementDramVoteCount() around use of this function.
    */
   void handleRxSocketPacket(pw::multibuf::MultiBuf &&payload);
+
+  /**
+   * Callback to be invoked when a socket event is received.
+   *
+   * @see pw::bluetooth::proxy::ProxyHost::AcquireL2capCoc()
+   *
+   * NOTE: this callback will not be invoked from the CHRE thread. It is
+   * expected that the caller invokes DramVoteClient::incrementDramVoteCount()
+   * and DramVoteClient::decrementDramVoteCount() around use of this function.
+   */
+  void handleSocketEvent(pw::bluetooth::proxy::L2capChannelEvent event);
 
  protected:
   uint64_t mId;

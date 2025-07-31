@@ -18,6 +18,7 @@
 
 #include "chre/core/ble_socket_manager.h"
 
+#include "chre/core/event.h"
 #include "chre/core/event_loop_manager.h"
 #include "chre/platform/log.h"
 #include "chre_api/chre.h"
@@ -166,56 +167,23 @@ void BleSocketManager::handlePlatformSocketEventSync(uint64_t socketId,
   }
   switch (event) {
     case SocketEvent::SEND_AVAILABLE:
-      EventLoopManagerSingleton::get()->getEventLoop().postEventOrDie(
-          CHRE_EVENT_BLE_SOCKET_SEND_AVAILABLE, nullptr, nullptr,
+      EventLoopManagerSingleton::get()->getEventLoop().distributeEventSync(
+          CHRE_EVENT_BLE_SOCKET_SEND_AVAILABLE, nullptr,
           btSocket->getNanoappInstanceId());
       break;
-    case SocketEvent::SOCKET_CLOSED_BY_HOST:
-      // In this scenario, the Host app may already know about the socket
-      // closure and may also notify CHRE. CHRE should close the socket on the
-      // first notification and ignore the second.
-      LOGW("Host closed socketId=%" PRIu64
-           " notifying nanoapp instanceId=%" PRIu16,
-           btSocket->getId(), btSocket->getNanoappInstanceId());
-      closeBtSocket(btSocket, "Socket closed by Host");
-      break;
-    case SocketEvent::BLUETOOTH_RESET:
-      // In this scenario, the Host app may already know about the socket
-      // closure and may also notify CHRE. CHRE should close the socket on the
-      // first notification and ignore the second.
-      LOGW("Bluetooth was reset and closed socketId=%" PRIu64
-           " notifying nanoapp instanceId=%" PRIu16,
-           btSocket->getId(), btSocket->getNanoappInstanceId());
-      closeBtSocket(btSocket, "Bluetooth reset");
-      break;
-    case SocketEvent::RECEIVED_INVALID_PACKET:
-      LOGE("Platform received invalid packet from socketId=%" PRIu64
-           " notifying nanoapp instanceId=%" PRIu16,
-           btSocket->getId(), btSocket->getNanoappInstanceId());
-      closeBtSocket(btSocket, "Received invalid packet");
-      break;
-    case SocketEvent::OOM_TO_RECEIVE_PACKET:
-      LOGE("Platform is OOM to receive packet from socketId=%" PRIu64
-           " notifying nanoapp instanceId=%" PRIu16,
-           btSocket->getId(), btSocket->getNanoappInstanceId());
+    case SocketEvent::SOCKET_CLOSURE_REQUEST:
+      LOGI(
+          "The platform encountered an unrecoverable error and is requesting "
+          "closure of socketId=%" PRIu64,
+          btSocket->getId());
+      EventLoopManagerSingleton::get()->getHostCommsManager().sendBtSocketClose(
+          btSocket->getId(), "offload stack requests socket closure");
       break;
     default:
-      LOGE("Received unknown event for socketId=%" PRIu64, btSocket->getId());
+      LOGE("Received unknown event %" PRIu8 " for socketId=%" PRIu64,
+           static_cast<uint8_t>(event), btSocket->getId());
       break;
   }
-}
-
-void BleSocketManager::closeBtSocket(PlatformBtSocket *btSocket,
-                                     const char *reason, bool notifyNanoapp) {
-  EventLoopManagerSingleton::get()->getHostCommsManager().sendBtSocketClose(
-      btSocket->getId(), reason);
-  if (notifyNanoapp) {
-    chreBleSocketDisconnectionEvent event = {.socketId = btSocket->getId()};
-    EventLoopManagerSingleton::get()->getEventLoop().distributeEventSync(
-        CHRE_EVENT_BLE_SOCKET_DISCONNECTION, &event,
-        btSocket->getNanoappInstanceId());
-  }
-  mBtSockets.deallocate(btSocket);
 }
 
 void BleSocketManager::handlePlatformSocketPacket(uint64_t socketId,
@@ -245,7 +213,6 @@ void BleSocketManager::handlePlatformSocketPacketSync(
          event->socketId);
     return;
   }
-
   EventLoopManagerSingleton::get()->getEventLoop().distributeEventSync(
       CHRE_EVENT_BLE_SOCKET_PACKET, event, btSocket->getNanoappInstanceId());
   btSocket->freeReceivedSocketPacket();
@@ -253,24 +220,35 @@ void BleSocketManager::handlePlatformSocketPacketSync(
 
 uint32_t BleSocketManager::closeSocketsOnNanoappUnload(
     uint16_t nanoappInstanceId) {
-  uint32_t numSocketsClosed = 0;
+  return mBtSockets.forEach(
+      [](PlatformBtSocket *btSocket, void *data) {
+        uint64_t nanoappInstanceId = *(static_cast<uint64_t *>(data));
+        if (btSocket->getNanoappInstanceId() == nanoappInstanceId) {
+          EventLoopManagerSingleton::get()
+              ->getHostCommsManager()
+              .sendBtSocketClose(btSocket->getId(), "Nanoapp unloaded");
+          return true;
+        }
+        return false;
+      },
+      &nanoappInstanceId);
+}
 
-  while (!mBtSockets.empty()) {
-    PlatformBtSocket *btSocket = mBtSockets.find(
-        [](PlatformBtSocket *btSocket, void *data) {
-          uint64_t nanoappInstanceId = *(static_cast<uint64_t *>(data));
-          return (btSocket->getNanoappInstanceId() == nanoappInstanceId);
-        },
-        &nanoappInstanceId);
-    if (btSocket == nullptr) {
-      break;
-    }
-    numSocketsClosed++;
-    closeBtSocket(btSocket, "Nanoapp unloaded",
-                  /*notifyNanoapp=*/false);
+void BleSocketManager::handleSocketClosedByHost(uint64_t socketId) {
+  PlatformBtSocket *btSocket = findPlatformBtSocket(socketId);
+  if (btSocket == nullptr) {
+    LOGE("Received notification that host closed socketId=%" PRIu64
+         " but socket does not exist.",
+         socketId);
+    return;
   }
-
-  return numSocketsClosed;
+  LOGI("Host closed socketId=%" PRIu64 " notifying nanoapp instanceId=%" PRIu16,
+       socketId, btSocket->getNanoappInstanceId());
+  chreBleSocketDisconnectionEvent event = {.socketId = btSocket->getId()};
+  EventLoopManagerSingleton::get()->getEventLoop().distributeEventSync(
+      CHRE_EVENT_BLE_SOCKET_DISCONNECTION, &event,
+      btSocket->getNanoappInstanceId());
+  mBtSockets.deallocate(btSocket);
 }
 
 }  // namespace chre

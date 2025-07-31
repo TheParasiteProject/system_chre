@@ -27,29 +27,6 @@
 
 namespace chre {
 
-namespace {
-
-SocketEvent convertPwSocketEventToChre(
-    pw::bluetooth::proxy::L2capChannelEvent event) {
-  switch (event) {
-    case pw::bluetooth::proxy::L2capChannelEvent::kWriteAvailable:
-      return SocketEvent::SEND_AVAILABLE;
-    case pw::bluetooth::proxy::L2capChannelEvent::kChannelClosedByOther:
-      return SocketEvent::SOCKET_CLOSED_BY_HOST;
-    case pw::bluetooth::proxy::L2capChannelEvent::kReset:
-      return SocketEvent::BLUETOOTH_RESET;
-    case pw::bluetooth::proxy::L2capChannelEvent::kRxInvalid:
-      return SocketEvent::RECEIVED_INVALID_PACKET;
-    case pw::bluetooth::proxy::L2capChannelEvent::kRxOutOfMemory:
-      return SocketEvent::OOM_TO_RECEIVE_PACKET;
-    default:
-      LOGE("Received unknown socket event from platform %" PRIu32, event);
-      return SocketEvent::UNKNOWN;
-  }
-}
-
-}  // namespace
-
 PlatformBtSocketBase::PlatformBtSocketBase(
     const BleL2capCocSocketData &socketData,
     PlatformBtSocketResources &platformBtSocketResources)
@@ -68,36 +45,12 @@ PlatformBtSocketBase::PlatformBtSocketBase(
       .credits = socketData.txConfig.credits,
   };
 
-  uint64_t socketId = socketData.socketId;
-
-  /**
-   * The eventCallback will not be invoked from the CHRE thread. It is expected
-   * that the caller invokes DramVoteClient::incrementDramVoteCount() and
-   * DramVoteClient::decrementDramVoteCount() around use of this function.
-   *
-   * NOTE: handlePlatformSocketEvent() adds an event to CHRE's event queue. We
-   * call forceDramAccess after adding this event to CHRE's event queue to avoid
-   * the race condition in which forceDramAccess() is called and CHRE's event
-   * queue empties, triggering a call to removeDramAccessVote() right before
-   * this event is enqueued.
-   */
-  auto eventCallback = [socketId](
-                           pw::bluetooth::proxy::L2capChannelEvent event) {
-    EventLoopManagerSingleton::get()
-        ->getBleSocketManager()
-        .handlePlatformSocketEvent(socketId, convertPwSocketEventToChre(event));
-    // Call after enqueuing event on CHRE's event loop queue
-    // TODO(b/429237573): Support enqueueing high power events on CHRE's event
-    // queue
-    forceDramAccess();
-  };
-
   pw::Result<pw::bluetooth::proxy::L2capCoc> result =
       platformBtSocketResources.getProxyHost().AcquireL2capCoc(
           mRxSimpleAllocator, socketData.connectionHandle, pwRxConfig,
           pwTxConfig,
           pw::bind_member<&PlatformBtSocketBase::handleRxSocketPacket>(this),
-          eventCallback);
+          pw::bind_member<&PlatformBtSocketBase::handleSocketEvent>(this));
   if (!result.ok()) {
     LOGE("AcquireL2capCoc failed: %s", result.status().str());
     return;
@@ -139,7 +92,57 @@ void PlatformBtSocketBase::handleRxSocketPacket(
       .handlePlatformSocketPacket(
           mId, reinterpret_cast<const uint8_t *>(packet->data()),
           static_cast<uint16_t>(packet->size()));
+  forceDramAccess();
+}
 
+void PlatformBtSocketBase::handleSocketEvent(
+    pw::bluetooth::proxy::L2capChannelEvent event) {
+  SocketEvent platformEvent = SocketEvent::SEND_AVAILABLE;
+  switch (event) {
+    case pw::bluetooth::proxy::L2capChannelEvent::kWriteAvailable:
+      break;
+    case pw::bluetooth::proxy::L2capChannelEvent::kChannelClosedByOther:
+      // Do not process event in CHRE
+      LOGI("Host or remote device closed socket");
+      return;
+    case pw::bluetooth::proxy::L2capChannelEvent::kReset:
+      // Do not process event in CHRE
+      LOGI("BT reset closed socket");
+      return;
+    case pw::bluetooth::proxy::L2capChannelEvent::kRxInvalid:
+      LOGE("Socket Rx packet invalid, requesting closure");
+      platformEvent = SocketEvent::SOCKET_CLOSURE_REQUEST;
+      break;
+    case pw::bluetooth::proxy::L2capChannelEvent::kRxOutOfMemory:
+      LOGE("OOM to receive Rx packet, requesting closure");
+      platformEvent = SocketEvent::SOCKET_CLOSURE_REQUEST;
+      break;
+    case pw::bluetooth::proxy::L2capChannelEvent::kRxWhileStopped:
+      // Do not process event in CHRE
+      LOGW(
+          "Received Rx packet while in `stopped` state. Waiting on channel "
+          "closure");
+      return;
+    default:
+      // Do not process event in CHRE
+      LOGE("Received unexpected socket event %" PRIu32,
+           static_cast<uint32_t>(event));
+      return;
+  }
+
+  /**
+   * NOTE: handlePlatformSocketEvent() adds an event to CHRE's event queue. We
+   * call forceDramAccess after adding this event to CHRE's event queue to avoid
+   * the race condition in which forceDramAccess() is called and CHRE's event
+   * queue empties, triggering a call to removeDramAccessVote() right before
+   * this event is enqueued.
+   *
+   * TODO(b/429237573): Support enqueueing high power events on CHRE's event
+   * queue and remove forceDramAccess call.
+   */
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handlePlatformSocketEvent(mId, platformEvent);
   forceDramAccess();
 }
 
@@ -164,7 +167,7 @@ int32_t PlatformBtSocket::sendSocketPacket(
   // this scenario, it is the responsibility of the nanoapp to free the data.
   // The nanoapp may choose to hold on to the data until it receives a
   // CHRE_EVENT_BLE_SOCKET_SEND_AVAILABLE event when it can re-attempt the send.
-  if (mL2capCoc.value().IsWriteAvailable() != pw::OkStatus()) {
+  if (mL2capCoc.value().IsWriteAvailable() == pw::Status::Unavailable()) {
     return CHRE_BLE_SOCKET_SEND_STATUS_QUEUE_FULL;
   }
 
@@ -201,10 +204,15 @@ int32_t PlatformBtSocket::sendSocketPacket(
     freeCallback(nonConstData, length);
     return CHRE_BLE_SOCKET_SEND_STATUS_FAILURE;
   }
-  pw::bluetooth::proxy::StatusWithMultiBuf status =
+  pw::bluetooth::proxy::StatusWithMultiBuf statusWithMultiBuf =
       mL2capCoc.value().Write(std::move(*multibuf));
-  CHRE_ASSERT(status.status.ok());
-  return CHRE_BLE_SOCKET_SEND_STATUS_SUCCESS;
+  // Nothing should write to the channel except CHRE so the IsWriteAvailable
+  // check should ensure that there is space in the queue
+  CHRE_ASSERT(statusWithMultiBuf.status != pw::Status::Unavailable());
+  if (statusWithMultiBuf.status.ok()) {
+    return CHRE_BLE_SOCKET_SEND_STATUS_SUCCESS;
+  }
+  return CHRE_BLE_SOCKET_SEND_STATUS_FAILURE;
 }
 
 }  // namespace chre

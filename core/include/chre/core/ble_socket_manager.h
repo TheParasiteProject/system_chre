@@ -126,7 +126,7 @@ class BleSocketManager : public NonCopyable {
    *
    * @param socketId Socket ID to be closed.
    */
-  void handleSocketClosedByHost(uint64_t /* socketId */) {}
+  void handleSocketClosedByHost(uint64_t socketId);
 
  private:
   static constexpr uint8_t kMaxNumSockets = 3;
@@ -154,16 +154,6 @@ class BleSocketManager : public NonCopyable {
         },
         &socketId);
   }
-
-  /**
-   * Closes BT socket and notifies the nanoapp and BT Socket HAL.
-   *
-   * @param btSocket Socket to be closed.
-   * @param reason Closure reason.
-   * @param notifyNanoapp whether to notify the nanoapp of the closure.
-   */
-  void closeBtSocket(PlatformBtSocket *btSocket, const char *reason,
-                     bool notifyNanoapp = true);
 };
 
 }  // namespace chre
