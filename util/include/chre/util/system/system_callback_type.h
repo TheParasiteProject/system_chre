@@ -87,6 +87,7 @@ enum class SystemCallbackType : uint16_t {
   BleSocketEvent,
   BleSocketFreePacketEvent,
   BleSocketPacketEvent,
+  BleSocketClosed,
 };
 
 //! Deferred/delayed callbacks use the event subsystem but are invariably sent

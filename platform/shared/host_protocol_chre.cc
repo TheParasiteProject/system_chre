@@ -280,6 +280,8 @@ bool HostProtocolChre::decodeMessageFromHost(const void *message,
                 container->message());
         LOGD("Received BT Socket close response for socketId=%" PRIu64,
              btSocketCloseResponse->socketId());
+        HostMessageHandlers::handleBtSocketClosed(
+            btSocketCloseResponse->socketId());
         success = true;
         break;
       }
