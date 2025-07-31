@@ -82,6 +82,7 @@ class HalClientForTest : public HalClient {
 
   void updateTimestamp() {
     updateWatchdogSnapshot("funcName", elapsedRealtime());
+    mWatchdogCv.notify_one();
   }
 
   void launchWatchdogTask(
@@ -267,7 +268,7 @@ TEST(HalClientTest, WatchdogMonitoring) {
 }
 
 TEST(HalClientTest, WatchdogTakeAction) {
-  constexpr auto kTimeout = 1000ms;
+  constexpr auto kTimeout = 500ms;
 
   auto mockContextHub = ndk::SharedRefBase::make<MockContextHub>();
   auto halClientForTest = std::make_unique<HalClientForTest>(
