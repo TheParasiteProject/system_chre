@@ -111,6 +111,8 @@ class HostMessageHandlers {
 
   static void handleBtSocketCapabilitiesRequest();
 
+  static void handleBtSocketClosed(uint64_t socketId);
+
  private:
   static void sendFragmentResponse(uint16_t hostClientId,
                                    uint32_t transactionId, uint32_t fragmentId,

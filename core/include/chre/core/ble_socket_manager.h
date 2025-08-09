@@ -42,6 +42,8 @@ class BleSocketManager : public NonCopyable {
    * Creates a PlatformBtSocket and notifies the nanoapp that a BLE socket has
    * been connected and is ready to be used.
    *
+   * NOTE: This must be called from CHRE's EventLoop thread.
+   *
    * @param socketData Metadata for the BLE socket.
    * @return chreError Result of whether the socket was created successfully and
    * whether the nanoapp has accepted it.
@@ -115,6 +117,16 @@ class BleSocketManager : public NonCopyable {
    * @return number of sockets closed.
    */
   uint32_t closeSocketsOnNanoappUnload(uint16_t nanoappInstanceId);
+
+  /**
+   * Handles the host closing the socket. Cleans up socket resources and
+   * notifies nanoapp of closure.
+   *
+   * NOTE: This must be called from CHRE's EventLoop thread.
+   *
+   * @param socketId Socket ID to be closed.
+   */
+  void handleSocketClosedByHost(uint64_t /* socketId */) {}
 
  private:
   static constexpr uint8_t kMaxNumSockets = 3;

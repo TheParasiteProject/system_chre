@@ -949,6 +949,11 @@ DRAM_REGION_FUNCTION void HostMessageHandlers::handleBtSocketOpen(
   LOGE("BT Socket offload not supported");
 }
 
+DRAM_REGION_FUNCTION void HostMessageHandlers::handleBtSocketClosed(
+    uint64_t /* socketId */) {
+  LOGE("BT Socket offload not supported");
+}
+
 DRAM_REGION_FUNCTION void sendAudioRequest() {
   auto msgBuilder = [](ChreFlatBufferBuilder &builder, void * /*cookie*/) {
     HostProtocolChre::encodeLowPowerMicAccessRequest(builder);
