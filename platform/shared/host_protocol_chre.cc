@@ -236,7 +236,7 @@ bool HostProtocolChre::decodeMessageFromHost(const void *message,
                   btSocketOpen->channelInfo());
           const char *name = getStringFromByteVector(btSocketOpen->name());
           HostMessageHandlers::handleBtSocketOpen(
-              static_cast<uint64_t>(btSocketOpen->hubId()), hostClientId,
+              static_cast<uint64_t>(btSocketOpen->hubId()),
               BleL2capCocSocketData{
                   .socketId = static_cast<uint64_t>(btSocketOpen->socketId()),
                   .endpointId =
@@ -583,8 +583,8 @@ void HostProtocolChre::encodeNanConfigurationRequest(
 }
 
 void HostProtocolChre::encodeBtSocketOpenResponse(
-    ChreFlatBufferBuilder &builder, uint16_t hostClientId, uint64_t socketId,
-    bool success, const char *reason) {
+    ChreFlatBufferBuilder &builder, uint64_t socketId, bool success,
+    const char *reason) {
   auto reasonOffset = addStringAsByteVector(builder, reason);
   auto socketOpenResponse = fbs::CreateBtSocketOpenResponse(
       builder, socketId,
@@ -592,17 +592,15 @@ void HostProtocolChre::encodeBtSocketOpenResponse(
               : fbs::BtSocketOpenStatus::FAILURE,
       reasonOffset);
   finalize(builder, fbs::ChreMessage::BtSocketOpenResponse,
-           socketOpenResponse.Union(), hostClientId);
+           socketOpenResponse.Union());
 }
 
 void HostProtocolChre::encodeBtSocketClose(ChreFlatBufferBuilder &builder,
-                                           uint16_t hostClientId,
                                            uint64_t socketId,
                                            const char *reason) {
   auto reasonOffset = addStringAsByteVector(builder, reason);
   auto socketClose = fbs::CreateBtSocketClose(builder, socketId, reasonOffset);
-  finalize(builder, fbs::ChreMessage::BtSocketClose, socketClose.Union(),
-           hostClientId);
+  finalize(builder, fbs::ChreMessage::BtSocketClose, socketClose.Union());
 }
 
 void HostProtocolChre::encodeBtSocketGetCapabilitiesResponse(

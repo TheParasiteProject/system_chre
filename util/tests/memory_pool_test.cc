@@ -19,6 +19,7 @@
 #include "chre/util/memory_pool.h"
 #include "chre/util/nested_data_ptr.h"
 
+#include <cstddef>
 #include <random>
 #include <vector>
 
@@ -267,6 +268,64 @@ TEST(MemoryPool, FindAnElementAfterDeallocationLargeSize) {
     } else {
       EXPECT_NE(foundElement, nullptr);
       EXPECT_EQ(foundElement, elements[i]);
+    }
+  }
+}
+
+TEST(MemoryPool, ForEachMatchFunctionAppliedToEveryElement) {
+  struct Element {
+    int number;
+    bool matched;
+  };
+
+  constexpr int kNumElements = 100;
+  MemoryPool<Element, kNumElements> memoryPool;
+  Element *elements[kNumElements];
+
+  for (int i = 0; i < kNumElements; ++i) {
+    elements[i] = memoryPool.allocate(Element{.number = i, .matched = false});
+  }
+
+  auto matchEvenOrOdd = [](Element *element, void *data) {
+    NestedDataPtr<bool> matchEven(data);
+    int remainder = matchEven ? 0 : 1;
+    if (element->number % 2 == remainder) {
+      element->matched = true;
+      return true;
+    }
+    return false;
+  };
+
+  // Use the matchEvenNumbers variable to verify that function data is handled
+  // correctly
+  bool matchEvenNumbers = true;
+
+  Element *foundElement =
+      memoryPool.find(matchEvenOrOdd, NestedDataPtr<bool>(matchEvenNumbers));
+  EXPECT_NE(foundElement, nullptr);
+  EXPECT_EQ(foundElement, elements[0]);
+
+  // Only the first element is matched with find.
+  for (int i = 0; i < kNumElements; ++i) {
+    if (i == 0) {
+      EXPECT_EQ(elements[i]->matched, true);
+    } else {
+      EXPECT_EQ(elements[i]->matched, false);
+    }
+  }
+
+  foundElement->matched = false;
+
+  EXPECT_EQ(
+      memoryPool.forEach(matchEvenOrOdd, NestedDataPtr<bool>(matchEvenNumbers)),
+      50);
+
+  // All elements with even numbers are matched when forEach is used.
+  for (int i = 0; i < kNumElements; ++i) {
+    if (i % 2 == 0) {
+      EXPECT_EQ(elements[i]->matched, true);
+    } else {
+      EXPECT_EQ(elements[i]->matched, false);
     }
   }
 }
