@@ -593,7 +593,10 @@ struct chreWifiScanResult {
     uint32_t primaryChannel;
 
     /**
-     * If the channel width is 20 MHz, this field is not relevant and set to 0.
+     * If the channel width is 20 MHz, this field is not relevant and must be
+     * ignored by the nanoapp. CHRE implementations are recommended to set it
+     * to 0.
+     *
      * If the channel width is 40, 80, or 160 MHz, then this denotes the channel
      * center frequency (in MHz). If the channel is 80+80 MHz, then this denotes
      * the center frequency of segment 0, which contains the primary channel.
