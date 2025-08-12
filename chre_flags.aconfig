@@ -110,3 +110,13 @@ flag {
     purpose: PURPOSE_BUGFIX
   }
 }
+
+flag {
+  name: "efw_xport_nonwake_rx_ring"
+  namespace: "context_hub"
+  description: "Flag guarding use of separate RX ring buffer for nonwaking messages"
+  bug: "432114430"
+  metadata {
+    purpose: PURPOSE_BUGFIX
+  }
+}
