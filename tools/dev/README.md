@@ -6,6 +6,13 @@ environment for CHRE.
 ## Usage
 
 TODO(b/374392644) - Add explanations about how to use these tools.
+TODO(b/374392644) - `chre_lunch` should support listing all supported platform-target combinations.
+
+1. Run `source env_setup.sh` to initiate shell commands, which will enable commands like
+   `chre_lunch`, etc.
+2. Run `chre_lunch <platform-target>` to set up environment for a specific platform and target
+   combination. For example, to start development of nanoapp on tinysys platform, run
+   `chre_lunch tinysys-nanoapp`.
 
 ## Configuration
 
@@ -71,7 +78,8 @@ spawned child shell sessions. Each environment variable object has the following
   value.
 - `type` (string, required): The type of the variable, which can be:
     - `path`: Represents a file system path.
-    - `value`: A simple string value.
+    - `value`: A simple string value. At this moment only `-` and characters from `[a-zA-Z0-9_]` are
+      allowed.
     - `file`: Represents a path to a file.
 - `default` (string, optional): The default value for the environment variable. This can be a
   static string or can reference other environment variables using the `$` syntax (e.g.,
@@ -111,7 +119,14 @@ functions.
 
 TODO(b/374392644) - describe the shell commands available to use after the environment is set up.
 
+- `chre_envs`: Prints all the environment variables set up for CHRE development.
+- `chre_lunch <platform-target>`: Sets up the environment for specific platform and target
+  combination.
+
 ## Python Scripts
 
 TODO(b/374392644) - describe the purpose of the Python scripts in this directory and how to use them
 separately.
+
+`env_setup.py`: A helper script used to set up the CHRE development environment. Users should not
+use this script directly. Instead, it is used internally by the shell script `env_setup.sh`.
