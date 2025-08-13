@@ -177,6 +177,17 @@ struct SocketSendData {
 
 }  // namespace
 
+TEST_F(BleSocketTest, BleSocketCapabilitesTest) {
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketCapabilitiesRequestByHost();
+  BtSocketCapabilities capabilities = getSocketCapabilities();
+  EXPECT_EQ(capabilities.leCocNumberOfSupportedSockets, 3);
+  EXPECT_EQ(capabilities.leCocMtu, 2048);
+  EXPECT_EQ(capabilities.rfcommNumberOfSupportedSockets, 0);
+  EXPECT_EQ(capabilities.rfcommMaxFrameSize, 0);
+}
+
 TEST_F(BleSocketTest, BleSocketAcceptConnectionTest) {
   uint64_t appId = loadNanoapp(MakeUnique<BleSocketConnectApp>());
 

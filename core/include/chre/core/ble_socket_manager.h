@@ -39,6 +39,11 @@ class BleSocketManager : public NonCopyable {
       : mPlatformBtSocketResources(std::forward<Args>(args)...) {}
 
   /**
+   * Handles a request from the Host to get CHRE's BLE socket capabilities.
+   */
+  void handleSocketCapabilitiesRequestByHost();
+
+  /**
    * Handles a socket open request from the host. Switches the context to the
    * event loop thread before processing the socket open request with
    * handleSocketOpenedByHostSync.

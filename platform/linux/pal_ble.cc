@@ -21,6 +21,7 @@
 #include "chre/platform/linux/task_util/task_manager.h"
 #include "chre/util/memory.h"
 #include "chre/util/unique_ptr.h"
+#include "include/chre/platform/linux/pal_ble.h"
 
 #include <chrono>
 #include <optional>
@@ -41,6 +42,7 @@ bool gDelayScanStart = false;
 uint32_t gSocketClosureCount = 0;
 bool gSocketOpenSuccess = false;
 const char *gSocketOpenFailureReason = nullptr;
+chre::BtSocketCapabilities gSocketCapabilities{0, 0, 0, 0};
 
 std::mutex gBatchMutex;
 std::vector<struct chreBleAdvertisementEvent *> gBatchedAdEvents;
@@ -283,6 +285,7 @@ void resetSocketVariables() {
   gSocketClosureCount = 0;
   gSocketOpenSuccess = false;
   gSocketOpenFailureReason = nullptr;
+  gSocketCapabilities = {0, 0, 0, 0};
 }
 
 void incrementSocketClosureCount() {
@@ -307,6 +310,14 @@ void setSocketOpenFailureReason(const char *reason) {
 
 const char *getSocketOpenFailureReason() {
   return gSocketOpenFailureReason;
+}
+
+void setSocketCapabilities(BtSocketCapabilities capabilities) {
+  gSocketCapabilities = capabilities;
+}
+
+BtSocketCapabilities getSocketCapabilities() {
+  return gSocketCapabilities;
 }
 
 }  // namespace chre

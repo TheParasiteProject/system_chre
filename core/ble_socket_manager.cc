@@ -40,6 +40,16 @@ struct socketPacketData {
 
 }  // namespace
 
+void BleSocketManager::handleSocketCapabilitiesRequestByHost() {
+  EventLoopManagerSingleton::get()
+      ->getHostCommsManager()
+      .sendBtSocketGetCapabilitiesResponse(
+          /*leCocNumberOfSupportedSockets=*/kMaxNumSockets,
+          /*leCocMtu=*/mPlatformBtSocketResources.getLeCocMtu(),
+          /*rfcommNumberOfSupportedSockets=*/0,
+          /*rfcommMaxFrameSize=*/0);
+}
+
 void BleSocketManager::handleSocketOpenedByHost(
     const BleL2capCocSocketData &socketData) {
   LOGI("handleSocketOpenedByHost request for endpointId: %" PRIx64

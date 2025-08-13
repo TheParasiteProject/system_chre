@@ -91,6 +91,20 @@ class HostLink : public HostLinkBase, public NonCopyable {
                      size_t encodedMetricLen);
 
   /**
+   * Sends a BT socket get capabilities response to the host.
+   *
+   * @param leCocNumberOfSupportedSockets Number of LE COC sockets supported
+   * @param leCocMtu Max LE COC Rx MTU
+   * @param rfcommNumberOfSupportedSockets Number of RFCOMM sockets supported
+   * @param rfcommMaxFrameSize Max RFCOMM frame size
+   *
+   * @return true if the message was successfully sent
+   */
+  bool sendBtSocketGetCapabilitiesResponse(
+      uint32_t leCocNumberOfSupportedSockets, uint32_t leCocMtu,
+      uint32_t rfcommNumberOfSupportedSockets, uint32_t rfcommMaxFrameSize);
+
+  /**
    * Sends a BT socket open response message to the host.
    *
    * @param socketId BT socket identifier

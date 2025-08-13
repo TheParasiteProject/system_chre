@@ -40,6 +40,15 @@ bool HostLink::sendMessageDeliveryStatus(uint32_t /* messageSequenceNumber */,
   return true;
 }
 
+bool HostLink::sendBtSocketGetCapabilitiesResponse(
+    uint32_t leCocNumberOfSupportedSockets, uint32_t leCocMtu,
+    uint32_t rfcommNumberOfSupportedSockets, uint32_t rfcommMaxFrameSize) {
+  setSocketCapabilities(
+      BtSocketCapabilities{leCocNumberOfSupportedSockets, leCocMtu,
+                           rfcommNumberOfSupportedSockets, rfcommMaxFrameSize});
+  return true;
+}
+
 bool HostLink::sendBtSocketOpenResponse(uint64_t /*socketId*/, bool success,
                                         const char *reason) {
   setSocketOpenSuccess(success);
