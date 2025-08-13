@@ -102,15 +102,15 @@ class HostLink : public HostLinkBase, public NonCopyable {
   bool sendBtSocketOpenResponse(uint64_t socketId, bool success,
                                 const char *reason);
 
-#ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
   /**
    * Sends a BT socket close message to the host.
    *
    * @param socketId BT socket identifier
    * @param reason Reason for closing the socket
+   *
+   * @return true if the message was successfully sent
    */
-  void sendBtSocketClose(uint64_t socketId, const char *reason);
-#endif  // CHRE_BLE_SOCKET_SUPPORT_ENABLED
+  bool sendBtSocketClose(uint64_t socketId, const char *reason);
 };
 
 }  // namespace chre

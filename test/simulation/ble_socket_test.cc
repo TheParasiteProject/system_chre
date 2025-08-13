@@ -726,15 +726,9 @@ TEST_F(BleSocketTest, BleSocketClosedAfterHostMessageTest) {
       .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
 
-  EventLoopManagerSingleton::get()->deferCallback(
-      SystemCallbackType::BleSocketClosed, &mSocketData,
-      [](uint16_t, void *data, void *) {
-        auto socketData = static_cast<BleL2capCocSocketData *>(data);
-        EventLoopManagerSingleton::get()
-            ->getBleSocketManager()
-            .handleSocketClosedByHost(socketData->socketId);
-      });
-
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketClosedByHost(mSocketData.socketId);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_DISCONNECTION);
   // Host not notified because it triggered the closure
   EXPECT_EQ(getSocketClosureCount(), 0);

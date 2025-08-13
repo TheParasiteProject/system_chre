@@ -257,6 +257,21 @@ uint32_t BleSocketManager::closeSocketsOnNanoappUnload(
 }
 
 void BleSocketManager::handleSocketClosedByHost(uint64_t socketId) {
+  auto cbData = MakeUnique<uint64_t>(socketId);
+  if (cbData == nullptr) {
+    LOG_OOM();
+    return;
+  }
+  EventLoopManagerSingleton::get()->deferCallback(
+      SystemCallbackType::BleSocketClosed, std::move(cbData),
+      [](SystemCallbackType /*type*/, UniquePtr<uint64_t> &&data) {
+        EventLoopManagerSingleton::get()
+            ->getBleSocketManager()
+            .handleSocketClosedByHostSync(*data.get());
+      });
+}
+
+void BleSocketManager::handleSocketClosedByHostSync(uint64_t socketId) {
   PlatformBtSocket *btSocket = findPlatformBtSocket(socketId);
   if (btSocket == nullptr) {
     LOGE("Received notification that host closed socketId=%" PRIu64

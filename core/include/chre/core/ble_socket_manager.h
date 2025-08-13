@@ -105,10 +105,9 @@ class BleSocketManager : public NonCopyable {
   uint32_t closeSocketsOnNanoappUnload(uint16_t nanoappInstanceId);
 
   /**
-   * Handles the host closing the socket. Cleans up socket resources and
-   * notifies nanoapp of closure.
-   *
-   * NOTE: This must be called from CHRE's EventLoop thread.
+   * Handles the host closing the socket. Switches the context to the event loop
+   * thread before processing the socket close request with
+   * handleSocketClosedByHostSync.
    *
    * @param socketId Socket ID to be closed.
    */
@@ -130,6 +129,11 @@ class BleSocketManager : public NonCopyable {
    * @see handlePlatformSocketPacket
    */
   void handlePlatformSocketPacketSync(chreBleSocketPacketEvent *event);
+
+  /**
+   * @see handleSocketClosedByHost
+   */
+  void handleSocketClosedByHostSync(uint64_t socketId);
 
   static constexpr uint8_t kMaxNumSockets = 3;
 
