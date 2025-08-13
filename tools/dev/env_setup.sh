@@ -141,6 +141,64 @@ _setup_python_virtual_env() {
 }
 
 #######################################
+# Builds a CHRE target (nanoapp or shim).
+#
+# This function is a wrapper around `make`. After a successful build, it
+# locates the output `.so` file, signs it according to the platform, and
+# runs a symbol check for nanoapps.
+# It also supports a special `-C` argument to generate `compile_commands.json`
+# for IDE support without performing a full build.
+# Globals:
+#   CHRE_BUILD_TARGET, CHRE_DEV_SCRIPT_PATH, CHRE_PLATFORM,
+#   CHRE_TARGET_TYPE, HEXAGON_SDK_PREFIX, TEST_SIGN_KEY
+# Arguments:
+#   -C: Cleans and generates compile_commands.json.
+#######################################
+chre_make() {
+  # When '-C' is given the actual target won't be made because the dryrun output is used to generate
+  # CMakeLists.txt and compile_commands.json.
+  if [[ $1 == "-C" ]]; then
+    shift
+    make clean && \
+    python3 $CHRE_DEV_SCRIPT_PATH/cml_gen.py -c "make -n $CHRE_BUILD_TARGET" -o out "$@" && \
+    mkdir out/build && \
+    pushd out/build > /dev/null
+    if [[ $? -eq 0 ]]; then
+      cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ../ && \
+      mv compile_commands.json ../ && \
+      rm -rf out/build
+    fi
+    popd > /dev/null
+    return
+  fi
+
+  make $CHRE_BUILD_TARGET || return 1
+
+  local so_files=(./out/$CHRE_BUILD_TARGET/*.so)
+  if [[ ${#so_files[@]} -eq 0 ]]; then
+    echo "Error: No .so file found in ./out/$CHRE_BUILD_TARGET/" >&2
+    return 1
+  elif [[ ${#so_files[@]} -gt 1 ]]; then
+    echo "Error: Multiple .so files found. Not sure which one to sign:" >&2
+    printf " - %s\n" "${so_files[@]}" >&2
+    return 1
+  fi
+  local so_file="${so_files[0]}"
+  signed_path="./out/$CHRE_BUILD_TARGET/signed"
+
+  if [[ ! -f "$so_file" ]]; then
+    return 1
+  fi
+
+  if [[ ! -d $signed_path ]]; then
+    mkdir -p $signed_path
+  fi
+
+  # TODO(b/374392644) - Add support for signing
+  # TODO(b/374392644) - Add support for external symbols checking
+}
+
+#######################################
 # Prints all currently configured CHRE environment variables.
 # Globals:
 #   CHRE_ENVS (array of environment variable names)

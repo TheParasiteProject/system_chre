@@ -5,14 +5,43 @@ environment for CHRE.
 
 ## Usage
 
-TODO(b/374392644) - Add explanations about how to use these tools.
+TODO(b/374392644) - Add explanations about how to use these tools.\
 TODO(b/374392644) - `chre_lunch` should support listing all supported platform-target combinations.
+
+### Set up the environment
+
+To initiate the CHRE development environment, follow these steps:
 
 1. Run `source env_setup.sh` to initiate shell commands, which will enable commands like
    `chre_lunch`, etc.
 2. Run `chre_lunch <platform-target>` to set up environment for a specific platform and target
    combination. For example, to start development of nanoapp on tinysys platform, run
    `chre_lunch tinysys-nanoapp`.
+
+### Build a target
+
+After setting up the environment for a specific platform and target combination, a CHRE target
+(e.g., `nanoapp` or `libchre`) can be built by running `chre_make` from
+the folder where the target is defined. To generate `CMakeLists.txt` and `compile_commands.json`
+simply add `-C` option to `chre_make`. An additional source path can be provided using `-s`, which
+fits for the project that the build folder is separated from the src folder. For example:
+
+```
+chre_make -C -s ../../src/general_test
+```
+
+NOTE: When `-C` is provided `chre_make` will not actually build the target. This is because the
+dryrun output is used to generate `CMakeLists.txt` and `compile_commands.json`. Therefore to build
+the binary please do not add `-C`.
+
+### Commands available
+
+TODO(b/374392644) - describe the shell commands available to use after the environment is set up.
+
+- `chre_envs`: Prints all the environment variables set up for CHRE development.
+- `chre_lunch <platform-target>`: Sets up the environment for specific platform and target
+  combination.
+- `chre_make [-C] [-s <src_path>]`: Builds the CHRE target.
 
 ## Configuration
 
@@ -115,18 +144,21 @@ functions.
       the above action will clone the qsh repository from the branch specified by the
       environment variable `QSH_BRANCH` into the directory `/tmp/qsh-$QSH_BRANCH`.
 
-## Commands
-
-TODO(b/374392644) - describe the shell commands available to use after the environment is set up.
-
-- `chre_envs`: Prints all the environment variables set up for CHRE development.
-- `chre_lunch <platform-target>`: Sets up the environment for specific platform and target
-  combination.
-
 ## Python Scripts
 
 TODO(b/374392644) - describe the purpose of the Python scripts in this directory and how to use them
 separately.
 
-`env_setup.py`: A helper script used to set up the CHRE development environment. Users should not
-use this script directly. Instead, it is used internally by the shell script `env_setup.sh`.
+### Internal
+
+Scripts listed here are used internally by the shell commands. Using them directly is not supported.
+
+- `env_setup.py`: A helper script used to set up the CHRE development environment. It is used
+  internally by the shell script `env_setup.sh`.
+
+### public
+
+Scripts listed here are can also be used as a stand-alone tool to facilitate special needs.
+
+- `cml_gen.py`: A script to generate `CMakeLists.txt` and `compile commands.json` files for the
+  corresponding target.
