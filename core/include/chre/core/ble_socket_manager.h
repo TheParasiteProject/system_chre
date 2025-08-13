@@ -88,12 +88,6 @@ class BleSocketManager : public NonCopyable {
   void handlePlatformSocketEvent(uint64_t socketId, SocketEvent socketEvent);
 
   /**
-   * @see handlePlatformSocketEvent
-   */
-  void handlePlatformSocketEventSync(uint64_t socketId,
-                                     SocketEvent socketEvent);
-
-  /**
    * Handles a socket packet from the platform. Switches the context to the
    * event loop thread before processing the event with
    * handlePlatformSocketPacketSync.
@@ -104,11 +98,6 @@ class BleSocketManager : public NonCopyable {
    */
   void handlePlatformSocketPacket(uint64_t socketId, const uint8_t *data,
                                   uint16_t length);
-
-  /**
-   * @see handlePlatformSocketPacket
-   */
-  void handlePlatformSocketPacketSync(chreBleSocketPacketEvent *event);
 
   /**
    * Closes the sockets belonging to a nanoapp when it is unloaded.
@@ -129,6 +118,17 @@ class BleSocketManager : public NonCopyable {
   void handleSocketClosedByHost(uint64_t socketId);
 
  private:
+  /**
+   * @see handlePlatformSocketEvent
+   */
+  void handlePlatformSocketEventSync(uint64_t socketId,
+                                     SocketEvent socketEvent);
+
+  /**
+   * @see handlePlatformSocketPacket
+   */
+  void handlePlatformSocketPacketSync(chreBleSocketPacketEvent *event);
+
   static constexpr uint8_t kMaxNumSockets = 3;
 
   /**
