@@ -39,6 +39,8 @@ const struct chrePalBleCallbacks *gCallbacks = nullptr;
 bool gBleEnabled = false;
 bool gDelayScanStart = false;
 uint32_t gSocketClosureCount = 0;
+bool gSocketOpenSuccess = false;
+const char *gSocketOpenFailureReason = nullptr;
 
 std::mutex gBatchMutex;
 std::vector<struct chreBleAdvertisementEvent *> gBatchedAdEvents;
@@ -277,8 +279,10 @@ bool startBleScan() {
   return startScan();
 }
 
-void resetSocketClosureCount() {
+void resetSocketVariables() {
   gSocketClosureCount = 0;
+  gSocketOpenSuccess = false;
+  gSocketOpenFailureReason = nullptr;
 }
 
 void incrementSocketClosureCount() {
@@ -287,6 +291,22 @@ void incrementSocketClosureCount() {
 
 uint32_t getSocketClosureCount() {
   return gSocketClosureCount;
+}
+
+void setSocketOpenSuccess(bool success) {
+  gSocketOpenSuccess = success;
+}
+
+bool getSocketOpenSuccess() {
+  return gSocketOpenSuccess;
+}
+
+void setSocketOpenFailureReason(const char *reason) {
+  gSocketOpenFailureReason = reason;
+}
+
+const char *getSocketOpenFailureReason() {
+  return gSocketOpenFailureReason;
 }
 
 }  // namespace chre

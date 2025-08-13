@@ -43,11 +43,19 @@ void delayBleScanStart(bool delay);
  */
 bool startBleScan();
 
-void resetSocketClosureCount();
+void resetSocketVariables();
 
 void incrementSocketClosureCount();
 
 uint32_t getSocketClosureCount();
+
+void setSocketOpenSuccess(bool success);
+
+bool getSocketOpenSuccess();
+
+void setSocketOpenFailureReason(const char *reason);
+
+const char *getSocketOpenFailureReason();
 
 }  // namespace chre
 

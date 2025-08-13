@@ -90,6 +90,18 @@ class HostLink : public HostLinkBase, public NonCopyable {
   bool sendMetricLog(uint32_t metricId, const uint8_t *encodedMetric,
                      size_t encodedMetricLen);
 
+  /**
+   * Sends a BT socket open response message to the host.
+   *
+   * @param socketId BT socket identifier
+   * @param success Whether the socket open was successful
+   * @param reason Reason for the socket open failure (if applicable)
+   *
+   * @return true if the message was successfully sent
+   */
+  bool sendBtSocketOpenResponse(uint64_t socketId, bool success,
+                                const char *reason);
+
 #ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
   /**
    * Sends a BT socket close message to the host.

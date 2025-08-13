@@ -75,22 +75,7 @@ class BleSocketTest : public TestBase {
  public:
   void SetUp() override {
     TestBase::SetUp();
-    resetSocketClosureCount();
-  }
-
-  void setupSocket(chreError expectedError) {
-    mExpectedSocketConnectionError = expectedError;
-    EventLoopManagerSingleton::get()->deferCallback(
-        SystemCallbackType::BleSocketConnected, &mSocketData,
-        [](uint16_t, void *data, void *extraData) {
-          auto socketData = static_cast<BleL2capCocSocketData *>(data);
-          auto error = static_cast<chreError *>(extraData);
-          EXPECT_EQ(EventLoopManagerSingleton::get()
-                        ->getBleSocketManager()
-                        .socketConnected(*socketData),
-                    *error);
-        },
-        &mExpectedSocketConnectionError);
+    resetSocketVariables();
   }
 
   // Send an LE_Read_Buffer_Size (V2) CommandComplete event to the ProxyHost
@@ -195,22 +180,93 @@ struct SocketSendData {
 TEST_F(BleSocketTest, BleSocketAcceptConnectionTest) {
   uint64_t appId = loadNanoapp(MakeUnique<BleSocketConnectApp>());
 
-  setupSocket(CHRE_ERROR_NONE);
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
+  EXPECT_TRUE(getSocketOpenSuccess());
 }
 
 TEST_F(BleSocketTest, BleSocketNanoappNotFoundTest) {
-  uint64_t appId = loadNanoapp(MakeUnique<BleSocketTestNanoapp>());
+  CREATE_CHRE_TEST_EVENT(NO_OP_EVENT, 1);
+
+  class App : public BleSocketTestNanoapp {
+   public:
+    void handleEvent(uint32_t, uint16_t eventType,
+                     const void *eventData) override {
+      switch (eventType) {
+        case CHRE_EVENT_TEST_EVENT: {
+          auto event = static_cast<const TestEvent *>(eventData);
+          switch (event->type) {
+            case NO_OP_EVENT: {
+              TestEventQueueSingleton::get()->pushEvent(NO_OP_EVENT);
+              break;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  uint64_t appId = loadNanoapp(MakeUnique<App>());
 
   constexpr uint64_t kInvalidEndpointId = 1;
   mSocketData.endpointId = kInvalidEndpointId;
-  setupSocket(CHRE_ERROR_DESTINATION_NOT_FOUND);
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketOpenedByHost(mSocketData);
+
+  // This ensures that the socket open response has been sent.
+  sendEventToNanoapp(appId, NO_OP_EVENT);
+  waitForEvent(NO_OP_EVENT);
+
+  EXPECT_FALSE(getSocketOpenSuccess());
+  EXPECT_STREQ(getSocketOpenFailureReason(), "failed to find nanoapp");
 }
 
 TEST_F(BleSocketTest, BleSocketDoNotAcceptConnectionTest) {
-  uint64_t appId = loadNanoapp(MakeUnique<BleSocketTestNanoapp>());
+  CREATE_CHRE_TEST_EVENT(NO_OP_EVENT, 1);
 
-  setupSocket(CHRE_ERROR);
+  class App : public BleSocketTestNanoapp {
+   public:
+    void handleEvent(uint32_t, uint16_t eventType,
+                     const void *eventData) override {
+      switch (eventType) {
+        case CHRE_EVENT_BLE_SOCKET_CONNECTION: {
+          auto *event =
+              static_cast<const struct chreBleSocketConnectionEvent *>(
+                  eventData);
+          TestEventQueueSingleton::get()->pushEvent(
+              CHRE_EVENT_BLE_SOCKET_CONNECTION, event->socketId);
+          // Do not accept the socket.
+          break;
+        }
+        case CHRE_EVENT_TEST_EVENT: {
+          auto event = static_cast<const TestEvent *>(eventData);
+          switch (event->type) {
+            case NO_OP_EVENT: {
+              TestEventQueueSingleton::get()->pushEvent(NO_OP_EVENT);
+              break;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  uint64_t appId = loadNanoapp(MakeUnique<App>());
+
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketOpenedByHost(mSocketData);
+  waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
+
+  // This ensures that the socket open response has been sent.
+  sendEventToNanoapp(appId, NO_OP_EVENT);
+  waitForEvent(NO_OP_EVENT);
+
+  EXPECT_FALSE(getSocketOpenSuccess());
+  EXPECT_STREQ(getSocketOpenFailureReason(), "nanoapp did not accept socket");
 }
 
 TEST_F(BleSocketTest, BleSocketBasicSendTest) {
@@ -253,7 +309,9 @@ TEST_F(BleSocketTest, BleSocketBasicSendTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
-  setupSocket(CHRE_ERROR_NONE);
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
 
   // Provide ACL credits to ProxyHost to allow the L2capChannel to start sending
@@ -371,7 +429,9 @@ TEST_F(BleSocketTest, BleSocketSendQueueFullTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
-  setupSocket(CHRE_ERROR_NONE);
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
 
   SocketSendData data = {
@@ -441,7 +501,9 @@ TEST_F(BleSocketTest, BleSocketBasicReceiveTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
-  setupSocket(CHRE_ERROR_NONE);
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
 
   std::array<uint8_t, 3> expectedPayload = {0xAB, 0xCD, 0xEF};
@@ -514,7 +576,9 @@ TEST_F(BleSocketTest, BleSocketInvalidRxTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
-  setupSocket(CHRE_ERROR_NONE);
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
 
   // Specify PDU length larger than Rx config to trigger kRxInvalid event
@@ -596,7 +660,9 @@ TEST_F(BleSocketTest, BleSocketBtResetTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
-  setupSocket(CHRE_ERROR_NONE);
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
 
   mProxyHost->Reset();
@@ -622,7 +688,9 @@ TEST_F(BleSocketTest, BleSocketBtResetTest) {
 TEST_F(BleSocketTest, BleSocketClosedAfterUnloadTest) {
   uint64_t appId = loadNanoapp(MakeUnique<BleSocketConnectApp>());
 
-  setupSocket(CHRE_ERROR_NONE);
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
 
   unloadNanoapp(appId);
@@ -653,7 +721,9 @@ TEST_F(BleSocketTest, BleSocketClosedAfterHostMessageTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
-  setupSocket(CHRE_ERROR_NONE);
+  EventLoopManagerSingleton::get()
+      ->getBleSocketManager()
+      .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
 
   EventLoopManagerSingleton::get()->deferCallback(

@@ -39,16 +39,13 @@ class BleSocketManager : public NonCopyable {
       : mPlatformBtSocketResources(std::forward<Args>(args)...) {}
 
   /**
-   * Creates a PlatformBtSocket and notifies the nanoapp that a BLE socket has
-   * been connected and is ready to be used.
-   *
-   * NOTE: This must be called from CHRE's EventLoop thread.
+   * Handles a socket open request from the host. Switches the context to the
+   * event loop thread before processing the socket open request with
+   * handleSocketOpenedByHostSync.
    *
    * @param socketData Metadata for the BLE socket.
-   * @return chreError Result of whether the socket was created successfully and
-   * whether the nanoapp has accepted it.
    */
-  chreError socketConnected(const BleL2capCocSocketData &socketData);
+  void handleSocketOpenedByHost(const BleL2capCocSocketData &socketData);
 
   /**
    * Callback a nanoapp uses to accept the socket. This will be used in the
@@ -118,6 +115,11 @@ class BleSocketManager : public NonCopyable {
   void handleSocketClosedByHost(uint64_t socketId);
 
  private:
+  /**
+   * @see handleSocketOpenedByHost
+   */
+  void handleSocketOpenedByHostSync(const BleL2capCocSocketData &socketData);
+
   /**
    * @see handlePlatformSocketEvent
    */
