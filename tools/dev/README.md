@@ -21,18 +21,25 @@ To initiate the CHRE development environment, follow these steps:
 ### Build a target
 
 After setting up the environment for a specific platform and target combination, a CHRE target
-(e.g., `nanoapp` or `libchre`) can be built by running `chre_make` from
-the folder where the target is defined. To generate `CMakeLists.txt` and `compile_commands.json`
-simply add `-C` option to `chre_make`. An additional source path can be provided using `-s`, which
-fits for the project that the build folder is separated from the src folder. For example:
+(e.g., `nanoapp` or `libchre`) can be built by running `chre_make` from the folder where the target
+Makefile is defined.
+
+The command will also sign the binary and check if there are any external symbols that are
+unresolvable.
+
+#### Use `-C` option to generate `CMakeLists.txt` and `compile_commands.json`
+
+When `-C` option is provided, `chre_make`can generate `CMakeLists.txt` and `compile_commands.json`.
+An additional source path can be provided using `-s`, which fits for the project that the build
+folder is separated from the src folder. For example:
 
 ```
 chre_make -C -s ../../src/general_test
 ```
 
-NOTE: When `-C` is provided `chre_make` will not actually build the target. This is because the
-dryrun output is used to generate `CMakeLists.txt` and `compile_commands.json`. Therefore to build
-the binary please do not add `-C`.
+Note that `chre_make` will only generate above two files when `-C` is provided. This is because the
+dryrun output of making the target is used extract source files, include directories, compiler
+flags, and macro definitions. Therefore to generate the target binary please do not add `-C`.
 
 ### Commands available
 
