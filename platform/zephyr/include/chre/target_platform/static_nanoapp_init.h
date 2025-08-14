@@ -43,6 +43,8 @@
     app_info.appVersionString = "<undefined>";                                \
     app_info.appPermissions = app_perms;                                      \
     app_info.minChreApiVersion = CHRE_API_VERSION;                            \
+    app_info.requestedThreadPriority =                                        \
+        NANOAPP_REQUESTED_THREAD_PRIORITY_NORMAL;                             \
     if (nanoapp.isNull()) {                                                   \
       FATAL_ERROR("Failed to allocate nanoapp " #app_name);                   \
     } else {                                                                  \

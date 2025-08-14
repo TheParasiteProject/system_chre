@@ -69,6 +69,11 @@ constexpr uint32_t kNanoappPermissions = 0
 #endif  // CHRE_TEST_NANOAPP_PERMS
     ;
 
+#ifndef NANOAPP_REQUESTED_THREAD_PRIORITY
+#define NANOAPP_REQUESTED_THREAD_PRIORITY \
+  NANOAPP_REQUESTED_THREAD_PRIORITY_NORMAL
+#endif  // CHRE_NSL_NANOAPP_REQUESTED_THREAD_PRIORITY
+
 #if defined(CHRE_SLPI_UIMG_ENABLED) || defined(CHRE_TCM_ENABLED)
 constexpr int kIsTcmNanoapp = 1;
 #else
@@ -196,6 +201,8 @@ extern "C" DLL_EXPORT const struct chreNslNanoappInfo _chreNslDsoNanoappInfo = {
     /* appVersionString */ _chreNanoappUnstableId,
     /* appPermissions */ kNanoappPermissions,
     /* minChreApiVersion */ NANOAPP_MIN_CHRE_API_VERSION,
+    /* requestedThreadPriority */
+    NANOAPP_REQUESTED_THREAD_PRIORITY,
 };
 
 const struct chreNslNanoappInfo *getChreNslDsoNanoappInfo() {
