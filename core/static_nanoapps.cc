@@ -57,18 +57,23 @@ const size_t kStaticNanoappCount = ARRAY_SIZE(kStaticNanoappList);
 
 #endif  // CHRE_VARIANT_SUPPLIES_STATIC_NANOAPP_LIST
 
+// TODO(b/440573580): Deprecate this method in favor of the span version
 void loadStaticNanoapps() {
   // Compare with zero to allow the compiler to optimize away the loop.
   // Tautological comparisons are not warnings when comparing a const with
   // another const.
   if (kStaticNanoappCount > 0) {
-    // Cast the kStaticNanoappCount to size_t to avoid tautological comparison
-    // warnings when the kStaticNanoappCount is zero.
-    for (size_t i = 0; i < reinterpret_cast<size_t>(kStaticNanoappCount); i++) {
-      UniquePtr<Nanoapp> nanoapp = kStaticNanoappList[i]();
-      EventLoopManagerSingleton::get()->getEventLoop().startNanoapp(
-          std::move(nanoapp));
-    }
+    pw::span<const StaticNanoappInitFunction> span(&kStaticNanoappList[0],
+                                                   kStaticNanoappCount);
+    loadStaticNanoapps(EventLoopManagerSingleton::get()->getEventLoop(), span);
+  }
+}
+
+void loadStaticNanoapps(EventLoop &eventLoop,
+                        pw::span<const StaticNanoappInitFunction> initList) {
+  for (size_t i = 0; i < initList.size(); i++) {
+    UniquePtr<Nanoapp> nanoapp = initList[i]();
+    eventLoop.startNanoapp(std::move(nanoapp));
   }
 }
 
