@@ -26,6 +26,10 @@
 using ::chre::MemoryPool;
 using ::chre::NestedDataPtr;
 
+namespace {
+bool gDestructorCalled = false;
+}  // anonymous namespace
+
 TEST(MemoryPool, ExhaustPool) {
   MemoryPool<int, 3> memoryPool;
   EXPECT_EQ(memoryPool.getFreeBlockCount(), 3);
@@ -328,4 +332,23 @@ TEST(MemoryPool, ForEachMatchFunctionAppliedToEveryElement) {
       EXPECT_EQ(elements[i]->matched, false);
     }
   }
+}
+
+TEST(MemoryPool, DestructorDestroysElements) {
+  gDestructorCalled = false;
+  class Element {
+   public:
+    Element() = default;
+    ~Element() {
+      gDestructorCalled = true;
+    }
+  };
+
+  {
+    MemoryPool<Element, 1> memoryPool;
+    Element *element = memoryPool.allocate();
+    (void) element;
+  }
+
+  EXPECT_TRUE(gDestructorCalled);
 }

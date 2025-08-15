@@ -42,6 +42,24 @@ MemoryPool<ElementType, kSize>::MemoryPool() {
 }
 
 template <typename ElementType, size_t kSize>
+MemoryPool<ElementType, kSize>::~MemoryPool() {
+  if constexpr (!std::is_trivially_destructible<ElementType>::value) {
+    for (size_t i = 0; i < kNumActiveTrackerBlocks; ++i) {
+      for (size_t j = 0; j < kBitSizeOfUInt32; ++j) {
+        size_t blockIndex = (i * kBitSizeOfUInt32) + j;
+        if (blockIndex < kSize) {
+          bool isElementActive = (mActiveTrackerBlocks[i] >> j) % 2 > 0;
+          ElementType *element = &blocks()[blockIndex].mElement;
+          if (isElementActive) {
+            element->~ElementType();
+          }
+        }
+      }
+    }
+  }
+}
+
+template <typename ElementType, size_t kSize>
 template <typename... Args>
 ElementType *MemoryPool<ElementType, kSize>::allocate(Args &&...args) {
   if (mFreeBlockCount == 0) {
