@@ -39,6 +39,7 @@ import sys
 import warnings
 from os import listdir
 from os.path import join
+from shell_util import warning, log_w, success
 
 import pyclibrary
 
@@ -239,25 +240,9 @@ if __name__ == '__main__':
   disallowed_symbols_list = _disallowed_symbols(observed_symbols,
                                                 allowed_symbols)
 
-  # TODO(b/374392644) - Have a common util for ascii arts like below
   if len(disallowed_symbols_list) > 0:
-    print(f"\033[31m")
-    print("▗▖ ▗▖ ▗▄▖ ▗▄▄▖ ▗▖  ▗▖▗▄▄▄▖▗▖  ▗▖ ▗▄▄▖")
-    print("▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▛▚▖▐▌  █  ▐▛▚▖▐▌▐▌   ")
-    print("▐▌ ▐▌▐▛▀▜▌▐▛▀▚▖▐▌ ▝▜▌  █  ▐▌ ▝▜▌▐▌▝▜▌")
-    print("▐▙█▟▌▐▌ ▐▌▐▌ ▐▌▐▌  ▐▌▗▄█▄▖▐▌  ▐▌▝▚▄▞▘")
-    print("")
-    print(f"{len(disallowed_symbols_list)} unresolvable symbol(s) found:\n")
+    warning(f"{len(disallowed_symbols_list)} unresolvable symbol(s) found:\n")
     for sym in disallowed_symbols_list:
-      print(f" - {sym}")
-    print(f"\033[0m")
-    sys.exit(1)
+      log_w(f" - {sym}")
   else:
-    print(f"\033[32m")
-    print("▗▄▄▖  ▗▄▖  ▗▄▄▖ ▗▄▄▖")
-    print("▐▌ ▐▌▐▌ ▐▌▐▌   ▐▌   ")
-    print("▐▛▀▘ ▐▛▀▜▌ ▝▀▚▖ ▝▀▚▖")
-    print("▐▌   ▐▌ ▐▌▗▄▄▞▘▗▄▄▞▘")
-    print("")
-    print(f"All the dynamic symbols are resolvable!")
-    print(f"\033[0m")
+    success(f"All the dynamic symbols are resolvable!")

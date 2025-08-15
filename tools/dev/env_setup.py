@@ -168,7 +168,7 @@ def _parse_platform_and_target_configs(
 
   Returns:
     A tuple containing:
-      - A list of initial shell commands to export.
+      - A dictionary of predefined environment variables.
       - A list of environment variable definitions to be processed further.
   """
   if not re.match(r"^\w+-\w+$", platform_and_target):
@@ -178,22 +178,24 @@ def _parse_platform_and_target_configs(
     )
 
   platform_name, target_name = platform_and_target.split("-")
-  for entry in config_data:
+  for platform in config_data:
     try:
-      if entry["platform"] != platform_name:
+      if platform["platform"] != platform_name:
         continue
-      for target in entry["targets"]:
+      for target in platform["targets"]:
         if target["name"] != target_name:
           continue
-        commands = [f"export CHRE_PLATFORM={platform_name}",
-                    f"export CHRE_TARGET_TYPE={target_name}",
-                    f"export CHRE_BUILD_TARGET={target["build_target"]}",
-                    ]
-        if entry.get("python_version", ""):
-          commands.append(f"export CHRE_PYTHON_VERSION={entry.get("python_version")}")
-        envs = entry.get("common_env_variables", []) + target.get(
+        env_map = {"CHRE_PLATFORM": platform_name,
+                   "CHRE_TARGET_TYPE": target_name,
+                   "CHRE_BUILD_TARGET": target["build_target"]
+                   }
+        if platform.get("python_version"):
+          env_map["CHRE_PYTHON_VERSION"] = platform.get("python_version")
+        if target.get("install_location"):
+          env_map["TARGET_INSTALL_LOCATION"] = target["install_location"]
+        envs = platform.get("common_env_variables", []) + target.get(
           "env_variables", [])
-        return commands, envs
+        return env_map, envs
     except KeyError as e:
       _fatal_error(
         f"Malformed config for {platform_name}-{target_name}: '{e.args[0]}' field is not defined")
@@ -210,7 +212,7 @@ def _parse_platform_and_target_configs(
   )
 
 
-def _parse_env_variable_fields(commands, env_vars):
+def _parse_env_variable_fields(env_vars, predefined_envs):
   """Interactively prompts for and processes environment variables.
 
   Iterates through a list of environment variable definitions, prompts the user
@@ -219,16 +221,21 @@ def _parse_env_variable_fields(commands, env_vars):
   be used. Adds default action to the commands list too if it is specified.
 
   Args:
-    commands: A list of shell commands to be appended to.
+    predefined_envs: A dict of environment variables pre-defined for the platform
+     and the target.
     env_vars: A list of dictionaries, where each dictionary defines an
-      environment variable to be set.
+      environment variable customizable by the user.
+
+  Returns:
+    A list of shell commands (strings) to set the environment variables.
   """
-  all_env_names = ["CHRE_PLATFORM", "CHRE_TARGET_TYPE", "CHRE_BUILD_TARGET"]
+  all_env_names = set(predefined_envs)
+  commands = [f"export {k}={v}" for k, v in predefined_envs.items()]
   for env_var in env_vars:
     try:
       if env_var["name"] in all_env_names:
         _fatal_error(f"Duplicate env variable name: {env_var["name"]}")
-      all_env_names.append(f"{env_var["name"]}")
+      all_env_names.add(f"{env_var["name"]}")
       default_value = env_var.get("default", "")
       default_action = env_var.get("default_action", [])
       prompt = f"{env_var["name"]} ({default_value})" if default_value else f"{env_var["name"]}"
@@ -258,7 +265,8 @@ def _parse_env_variable_fields(commands, env_vars):
       _fatal_error(f"The environment variable doesn't have the field '{e.args[0]}'")
 
   # Create CHRE_ENVS to record all the env variables to be created
-  commands.append("export CHRE_ENVS=(" + ' '.join(all_env_names) + ")")
+  commands.append("export CHRE_ENVS=(" + ' '.join(sorted(all_env_names)) + ")")
+  return commands
 
 
 def main():
@@ -285,9 +293,9 @@ def main():
     return
 
   config_data = _load_config()
-  commands, envs = _parse_platform_and_target_configs(config_data,
-                                                      args.platform_and_target)
-  _parse_env_variable_fields(commands, envs)
+  fixed_env_map, target_envs_configs = _parse_platform_and_target_configs(config_data,
+                                                                          args.platform_and_target)
+  commands = _parse_env_variable_fields(target_envs_configs, fixed_env_map)
 
   print("\n".join(commands))
   return

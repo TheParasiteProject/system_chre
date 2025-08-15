@@ -212,6 +212,19 @@ chre_make() {
 }
 
 #######################################
+# Builds and flashes a CHRE target to a device.
+#
+# This function first calls `chre_make` to build the target and then invokes
+# the `flash.py` script to perform the flashing operation.
+# Arguments:
+#   All arguments are passed directly to the flash.py script.
+#######################################
+chre_flash() {
+  chre_make || return 1
+  python3 "$CHRE_DEV_SCRIPT_PATH/flash.py" "$@"
+}
+
+#######################################
 # Prints all currently configured CHRE environment variables.
 # Globals:
 #   CHRE_ENVS (array of environment variable names)
