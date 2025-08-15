@@ -554,6 +554,9 @@ bool EventLoop::allocateAndPostEvent(uint16_t eventType, void *eventData,
   }
   if (!success) {
     LOG_OOM();
+    if (event != nullptr) {
+      mEventPool.deallocate(event);
+    }
   }
 
   return success;
