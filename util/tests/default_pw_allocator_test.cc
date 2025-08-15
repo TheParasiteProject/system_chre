@@ -16,7 +16,7 @@
 
 #include "gtest/gtest.h"
 
-#include "chre/util/default_container_allocator.h"
+#include "chre/util/pigweed/default_pw_allocator.h"
 
 #include "pw_allocator/layout.h"
 
@@ -25,8 +25,8 @@ using ::pw::allocator::Layout;
 namespace chre {
 namespace {
 
-TEST(DefaultContainerAllocatorTest, TestAllocate) {
-  DefaultContainerAllocator allocator;
+TEST(DefaultPwAllocatorTest, TestAllocate) {
+  DefaultPwAllocator allocator;
   void *ptr = allocator.Allocate(Layout(10));
   EXPECT_NE(ptr, nullptr);
   allocator.Deallocate(ptr);

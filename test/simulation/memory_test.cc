@@ -24,6 +24,7 @@
 #include "chre/platform/memory_manager.h"
 #include "chre/util/dynamic_vector.h"
 #include "chre/util/nanoapp/nanoapp_allocator_provider.h"
+#include "chre/util/pigweed/nanoapp_pw_allocator.h"
 #include "chre_api/chre/event.h"
 
 #include "gtest/gtest.h"
@@ -299,6 +300,53 @@ TEST_F(MemoryTest, NanoappAllocatorProvider) {
   EXPECT_EQ(memManager.getAllocationCount(), 1);
 
   sendEventToNanoappAndWait(appId, CLEAR, CLEAR);
+  EXPECT_EQ(memManager.getTotalAllocatedBytes(), 0);
+  EXPECT_EQ(memManager.getAllocationCount(), 0);
+}
+
+TEST_F(MemoryTest, NanoappPwAllocator) {
+  CREATE_CHRE_TEST_EVENT(ALLOC, 0);
+  CREATE_CHRE_TEST_EVENT(FREE, 1);
+
+  class App : public TestNanoapp {
+   public:
+    void handleEvent(uint32_t, uint16_t eventType,
+                     const void *eventData) override {
+      if (eventType == CHRE_EVENT_TEST_EVENT) {
+        auto event = static_cast<const TestEvent *>(eventData);
+        switch (event->type) {
+          case ALLOC: {
+            ASSERT_EQ(mPtr, nullptr);
+            mPtr = static_cast<int32_t *>(
+                mAllocator.Allocate(pw::allocator::Layout::Of<int32_t>()));
+            ASSERT_NE(mPtr, nullptr);
+            *mPtr = 0x1337;
+            triggerWait(ALLOC);
+            break;
+          }
+          case FREE:
+            ASSERT_NE(mPtr, nullptr);
+            mAllocator.Deallocate(mPtr);
+            mPtr = nullptr;
+            triggerWait(FREE);
+            break;
+        }
+      }
+    }
+
+   private:
+    NanoappPwAllocator mAllocator;
+    int32_t *mPtr = nullptr;
+  };
+
+  MemoryManager &memManager =
+      EventLoopManagerSingleton::get()->getMemoryManager();
+  uint64_t appId = loadNanoapp(MakeUnique<App>());
+  sendEventToNanoappAndWait(appId, ALLOC, ALLOC);
+  EXPECT_EQ(memManager.getTotalAllocatedBytes(), sizeof(int32_t));
+  EXPECT_EQ(memManager.getAllocationCount(), 1);
+
+  sendEventToNanoappAndWait(appId, FREE, FREE);
   EXPECT_EQ(memManager.getTotalAllocatedBytes(), 0);
   EXPECT_EQ(memManager.getAllocationCount(), 0);
 }

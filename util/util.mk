@@ -67,6 +67,7 @@ GOOGLETEST_SRCS += $(CHRE_PREFIX)/util/tests/buffer_test.cc
 GOOGLETEST_SRCS += $(CHRE_PREFIX)/util/tests/copyable_fixed_size_vector_test.cc
 GOOGLETEST_SRCS += $(CHRE_PREFIX)/util/tests/debug_dump_test.cc
 GOOGLETEST_SRCS += $(CHRE_PREFIX)/util/tests/default_allocator_provider_test.cc
+GOOGLETEST_SRCS += $(CHRE_PREFIX)/util/tests/default_pw_allocator_test.cc
 GOOGLETEST_SRCS += $(CHRE_PREFIX)/util/tests/duplicate_message_detector_test.cc
 GOOGLETEST_SRCS += $(CHRE_PREFIX)/util/tests/dynamic_vector_test.cc
 GOOGLETEST_SRCS += $(CHRE_PREFIX)/util/tests/fragmentation_manager_test.cc
