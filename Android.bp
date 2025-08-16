@@ -1060,6 +1060,7 @@ cc_library_static {
         "platform/shared/pal_system_api.cc",
         "platform/shared/platform_ble.cc",
         "platform/shared/platform_bt_socket.cc",
+        "platform/shared/platform_bt_socket_resources.cc",
         "platform/shared/platform_gnss.cc",
         "platform/shared/platform_wifi.cc",
         "platform/shared/sensor_pal/platform_sensor.cc",

@@ -21,6 +21,13 @@
 
 namespace chre {
 
+struct BtSocketCapabilities {
+  uint32_t leCocNumberOfSupportedSockets;
+  uint32_t leCocMtu;
+  uint32_t rfcommNumberOfSupportedSockets;
+  uint32_t rfcommMaxFrameSize;
+};
+
 /**
  * @return true if the BLE PAL is enabled.
  */
@@ -43,11 +50,23 @@ void delayBleScanStart(bool delay);
  */
 bool startBleScan();
 
-void resetSocketClosureCount();
+void resetSocketVariables();
 
 void incrementSocketClosureCount();
 
 uint32_t getSocketClosureCount();
+
+void setSocketOpenSuccess(bool success);
+
+bool getSocketOpenSuccess();
+
+void setSocketOpenFailureReason(const char *reason);
+
+const char *getSocketOpenFailureReason();
+
+void setSocketCapabilities(BtSocketCapabilities capabilities);
+
+BtSocketCapabilities getSocketCapabilities();
 
 }  // namespace chre
 

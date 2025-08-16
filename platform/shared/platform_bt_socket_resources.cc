@@ -14,21 +14,13 @@
  * limitations under the License.
  */
 
-#pragma once
-
+#include "chre/platform/platform_bt_socket_resources.h"
 #include "chre/target_platform/platform_bt_socket_resources_base.h"
 
 namespace chre {
 
-class PlatformBtSocketResources : public PlatformBtSocketResourcesBase {
- public:
-  // Forward all arguments passed to the PlatformBtSocketResources constructor
-  // to the PlatformBtSocketResourcesBase constructor
-  template <typename... Args>
-  PlatformBtSocketResources(Args &&...args)
-      : PlatformBtSocketResourcesBase(std::forward<Args>(args)...) {}
-
-  uint32_t getLeCocMtu();
-};
+uint32_t PlatformBtSocketResources::getLeCocMtu() {
+  return mLeCocMtu;
+}
 
 }  // namespace chre

@@ -40,12 +40,27 @@ bool HostLink::sendMessageDeliveryStatus(uint32_t /* messageSequenceNumber */,
   return true;
 }
 
-#ifdef CHRE_BLE_SOCKET_SUPPORT_ENABLED
-void HostLink::sendBtSocketClose(uint64_t /*socketId*/,
+bool HostLink::sendBtSocketGetCapabilitiesResponse(
+    uint32_t leCocNumberOfSupportedSockets, uint32_t leCocMtu,
+    uint32_t rfcommNumberOfSupportedSockets, uint32_t rfcommMaxFrameSize) {
+  setSocketCapabilities(
+      BtSocketCapabilities{leCocNumberOfSupportedSockets, leCocMtu,
+                           rfcommNumberOfSupportedSockets, rfcommMaxFrameSize});
+  return true;
+}
+
+bool HostLink::sendBtSocketOpenResponse(uint64_t /*socketId*/, bool success,
+                                        const char *reason) {
+  setSocketOpenSuccess(success);
+  setSocketOpenFailureReason(reason);
+  return true;
+}
+
+bool HostLink::sendBtSocketClose(uint64_t /*socketId*/,
                                  const char * /*reason*/) {
   incrementSocketClosureCount();
+  return true;
 }
-#endif  // CHRE_BLE_SOCKET_SUPPORT_ENABLED
 
 void HostLinkBase::sendNanConfiguration(bool enable) {
 #if defined(CHRE_WIFI_SUPPORT_ENABLED) && defined(CHRE_WIFI_NAN_SUPPORT_ENABLED)

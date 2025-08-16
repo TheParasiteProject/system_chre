@@ -39,16 +39,18 @@ class BleSocketManager : public NonCopyable {
       : mPlatformBtSocketResources(std::forward<Args>(args)...) {}
 
   /**
-   * Creates a PlatformBtSocket and notifies the nanoapp that a BLE socket has
-   * been connected and is ready to be used.
-   *
-   * NOTE: This must be called from CHRE's EventLoop thread.
+   * Handles a request from the Host to get CHRE's BLE socket capabilities.
+   */
+  void handleSocketCapabilitiesRequestByHost();
+
+  /**
+   * Handles a socket open request from the host. Switches the context to the
+   * event loop thread before processing the socket open request with
+   * handleSocketOpenedByHostSync.
    *
    * @param socketData Metadata for the BLE socket.
-   * @return chreError Result of whether the socket was created successfully and
-   * whether the nanoapp has accepted it.
    */
-  chreError socketConnected(const BleL2capCocSocketData &socketData);
+  void handleSocketOpenedByHost(const BleL2capCocSocketData &socketData);
 
   /**
    * Callback a nanoapp uses to accept the socket. This will be used in the
@@ -88,12 +90,6 @@ class BleSocketManager : public NonCopyable {
   void handlePlatformSocketEvent(uint64_t socketId, SocketEvent socketEvent);
 
   /**
-   * @see handlePlatformSocketEvent
-   */
-  void handlePlatformSocketEventSync(uint64_t socketId,
-                                     SocketEvent socketEvent);
-
-  /**
    * Handles a socket packet from the platform. Switches the context to the
    * event loop thread before processing the event with
    * handlePlatformSocketPacketSync.
@@ -106,11 +102,6 @@ class BleSocketManager : public NonCopyable {
                                   uint16_t length);
 
   /**
-   * @see handlePlatformSocketPacket
-   */
-  void handlePlatformSocketPacketSync(chreBleSocketPacketEvent *event);
-
-  /**
    * Closes the sockets belonging to a nanoapp when it is unloaded.
    *
    * @param nanoappInstanceId Nanoapp being unloaded.
@@ -119,16 +110,36 @@ class BleSocketManager : public NonCopyable {
   uint32_t closeSocketsOnNanoappUnload(uint16_t nanoappInstanceId);
 
   /**
-   * Handles the host closing the socket. Cleans up socket resources and
-   * notifies nanoapp of closure.
-   *
-   * NOTE: This must be called from CHRE's EventLoop thread.
+   * Handles the host closing the socket. Switches the context to the event loop
+   * thread before processing the socket close request with
+   * handleSocketClosedByHostSync.
    *
    * @param socketId Socket ID to be closed.
    */
   void handleSocketClosedByHost(uint64_t socketId);
 
  private:
+  /**
+   * @see handleSocketOpenedByHost
+   */
+  void handleSocketOpenedByHostSync(const BleL2capCocSocketData &socketData);
+
+  /**
+   * @see handlePlatformSocketEvent
+   */
+  void handlePlatformSocketEventSync(uint64_t socketId,
+                                     SocketEvent socketEvent);
+
+  /**
+   * @see handlePlatformSocketPacket
+   */
+  void handlePlatformSocketPacketSync(chreBleSocketPacketEvent *event);
+
+  /**
+   * @see handleSocketClosedByHost
+   */
+  void handleSocketClosedByHostSync(uint64_t socketId);
+
   static constexpr uint8_t kMaxNumSockets = 3;
 
   /**

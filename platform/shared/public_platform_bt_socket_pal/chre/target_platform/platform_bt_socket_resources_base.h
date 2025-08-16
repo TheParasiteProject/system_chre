@@ -29,6 +29,9 @@ class PlatformBtSocketResourcesBase {
     return mProxyHost;
   }
 
+ protected:
+  uint32_t mLeCocMtu = 2048;
+
  private:
   pw::bluetooth::proxy::ProxyHost &mProxyHost;
 };
