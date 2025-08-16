@@ -65,6 +65,8 @@ class MemoryPool : public NonCopyable {
    */
   MemoryPool();
 
+  ~MemoryPool();
+
   /**
    * Allocates space for an object, constructs it and returns the pointer to
    * that object.

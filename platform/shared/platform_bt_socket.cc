@@ -65,6 +65,7 @@ PlatformBtSocket::~PlatformBtSocket() {
   // CHRE's event loop thread. Pigweed's L2capChannelManager uses thread
   // protection to ensure that data cannot be sent via the receive callback
   // after the L2CAP channel has been destroyed.
+  mL2capCoc->Close();
   mL2capCoc.reset();
 }
 
