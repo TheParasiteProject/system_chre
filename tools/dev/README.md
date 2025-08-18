@@ -9,23 +9,19 @@ tool to facilitate various needs.
 
 ## Usage
 
-TODO(b/374392644) - `chre_lunch` should support listing all supported platform-target combinations.
-
 ### Set up the environment
 
-To initiate the CHRE development environment, run `source env_setup.sh` to initiate shell commands,
-which will enable commands like
-`chre_lunch`, etc.
-
-Below is a list of the commands available after sourcing the `env_setup.sh` script.
-
-#### Commands list
+To set up the CHRE development environment, run `source env_setup.sh` to initiate shell commands,
+which will enable commands like `chre_lunch`, etc. Here is a list of commands available after
+sourcing the `env_setup.sh` script.
 
 - `chre_envs`: Prints all the environment variables set up for CHRE development.
-- `chre_lunch <platform-target>`: Sets up the environment for specific platform and target
-  combination.
-- `chre_make [-C] [-s <src_path>]`: Builds the CHRE target.
-- `chre_flash [-R]`: Flash the device with a signed binary.
+- `chre_lunch <platform-target> [-c <config_file>]`: Sets up the environment for specific platform
+  and target combination. The `-c` option allows specifying an alternative configuration file
+  instead of the default `env_config.json`.
+- `chre_make [-C] [-s <src_path>]`: Builds the CHRE target. `-s` option allows the user to specify
+  a separate source path. `-C` option generates `CMakeLists.txt` and `compile_commands.json`.
+- `chre_flash [-R]`: Build the target and flash the device with a signed binary.
 
 Now running `chre_lunch <platform-target>` will set up environment for a specific platform and
 target combination. For example, to start development of nanoapp on tinysys platform, run
@@ -54,7 +50,7 @@ Note that `chre_make` will only generate above two files when `-C` is provided. 
 dryrun output of making the target is used extract source files, include directories, compiler
 flags, and macro definitions. Therefore to generate the target binary please do not add `-C`.
 
-### Copy the target onto the device
+### Flash the target onto the device
 
 After building the target, it can be flashed onto the device by running `chre_flash`. The location
 that the binary is copied to is determined by the setting of "install_location" in the
