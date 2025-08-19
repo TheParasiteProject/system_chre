@@ -66,7 +66,8 @@ void loadStaticNanoapps() {
     // warnings when the kStaticNanoappCount is zero.
     for (size_t i = 0; i < reinterpret_cast<size_t>(kStaticNanoappCount); i++) {
       UniquePtr<Nanoapp> nanoapp = kStaticNanoappList[i]();
-      EventLoopManagerSingleton::get()->getEventLoop().startNanoapp(nanoapp);
+      EventLoopManagerSingleton::get()->getEventLoop().startNanoapp(
+          std::move(nanoapp));
     }
   }
 }

@@ -114,12 +114,11 @@ int main(int argc, char **argv) {
       }
 
       // Load dynamic nanoapps specified on the command-line.
-      chre::DynamicVector<chre::UniquePtr<chre::Nanoapp>> dynamicNanoapps;
-      for (const auto &nanoapp : nanoappsArg.getValue()) {
-        dynamicNanoapps.push_back(chre::MakeUnique<chre::Nanoapp>());
-        dynamicNanoapps.back()->loadFromFile(nanoapp);
+      for (const auto &argValue : nanoappsArg.getValue()) {
+        auto nanoapp = chre::MakeUnique<chre::Nanoapp>();
+        nanoapp->loadFromFile(argValue);
         EventLoopManagerSingleton::get()->getEventLoop().startNanoapp(
-            dynamicNanoapps.back());
+            std::move(nanoapp));
       }
 
       EventLoopManagerSingleton::get()->getEventLoop().run();

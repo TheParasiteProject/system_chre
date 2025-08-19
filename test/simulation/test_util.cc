@@ -258,7 +258,8 @@ void unloadNanoapp(uint64_t appId) {
 
 void testFinishLoadingNanoappCallback(SystemCallbackType /* type */,
                                       UniquePtr<Nanoapp> &&nanoapp) {
-  EventLoopManagerSingleton::get()->getEventLoop().startNanoapp(nanoapp);
+  EventLoopManagerSingleton::get()->getEventLoop().startNanoapp(
+      std::move(nanoapp));
   TestEventQueueSingleton::get()->pushEvent(
       CHRE_EVENT_SIMULATION_TEST_NANOAPP_LOADED);
 }
