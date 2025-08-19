@@ -59,6 +59,18 @@
             "description": "The path to the SSC (Snapdragon Sensor Core) repository.\nThis path should point down to the adsp_proc folder"
           },
           {
+            "name": "EXTERNAL_SYMBOL_LISTS",
+            "type": "list[file]",
+            "description": "The files containing the external symbols that are allowed in the target binary, each symbol is on a line.",
+            "default": ""
+          },
+          {
+            "name": "EXTERNAL_SYMBOL_DECLARATIONS",
+            "type": "list[file]",
+            "description": "The header files declaring external functions (without using CHRE's macros).",
+            "default": ""
+          },
+          {
             "name": "CHRE_TARGET_EXTENSION",
             "type": "file",
             "default": "$QSH_PREFIX/qsh/build/variant/aosp_hexagonv66_qsh.mk",
@@ -110,6 +122,18 @@
             ]
           },
           {
+            "name": "EXTERNAL_SYMBOL_LISTS",
+            "type": "list[file]",
+            "description": "The files containing the external symbols that are allowed in the target binary, each symbol is on a line.",
+            "default": ""
+          },
+          {
+            "name": "EXTERNAL_SYMBOL_DECLARATIONS",
+            "type": "list[file]",
+            "description": "The header files declaring external functions (without using CHRE's macros).",
+            "default": ""
+          },
+          {
             "name": "CHRE_VARIANT_MK_INCLUDES",
             "type": "file",
             "default": "$QSH_PREFIX/qsh/variant/default/variant.mk",
@@ -150,6 +174,12 @@
             "type": "path",
             "default": "$ANDROID_BUILD_TOP/external/nanopb-c",
             "description": "The path to the nanopb installation. Defaults to the one in the Android tree."
+          },
+          {
+            "name": "EXPORTED_MACRO_FILES",
+            "type": "list[file]",
+            "description": "The list of files containing the exported symbols defined by CHRE's macros, separate them by space",
+            "default": "$ANDROID_BUILD_TOP/system/chre/platform/shared/nanoapp_loader.cc $ANDROID_BUILD_TOP/system/chre/platform/tinysys/include/chre/extensions/platform/symbol_list.h"
           },
           {
             "name": "TEST_SIGN_KEY",

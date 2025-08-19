@@ -122,6 +122,7 @@ spawned child shell sessions. Each environment variable object has the following
     - `value`: A simple string value. At this moment only `-` and characters from `[a-zA-Z0-9_]` are
       allowed.
     - `file`: Represents a path to a file.
+    - `list[path|value|file]`: Represents a list of values of the specified type
 - `default` (string, optional): The default value for the environment variable. This can be a
   static string or can reference other environment variables using the `$` syntax (e.g.,
   `$ANDROID_BUILD_TOP/external/nanopb-c`). Note that although using an environment variable to
