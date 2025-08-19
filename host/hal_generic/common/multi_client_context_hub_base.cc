@@ -224,7 +224,8 @@ bool MultiClientContextHubBase::sendFragmentedLoadRequest(
       builder, request, /* respondBeforeStart= */ false);
   HostProtocolHost::mutateHostClientId(builder.GetBufferPointer(),
                                        builder.GetSize(), clientId);
-  return mConnection->sendMessage(builder);
+  return mConnection->sendMessage(builder,
+                                  mConnection->getLoadRequestTimeout());
 }
 
 ScopedAStatus MultiClientContextHubBase::unloadNanoapp(int32_t contextHubId,
