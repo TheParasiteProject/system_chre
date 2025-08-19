@@ -12,6 +12,12 @@
         "name": "HEXAGON_SDK_PREFIX",
         "type": "path",
         "description": "The path to the Hexagon SDK. For example, /path/to/Hexagon_SDK/6.0.0.2"
+      },
+      {
+        "name": "CHRE_TARGET_ELF_READER",
+        "type": "file",
+        "description": "The path to the elf reader provided by the toolchain",
+        "default": "$HEXAGON_TOOLS_PREFIX/Tools/bin/hexagon-readelf"
       }
     ],
     "targets": [
@@ -125,6 +131,12 @@
         "name": "RISCV_TOOLCHAIN_PATH",
         "type": "path",
         "description": "The path to the RISC-V toolchain which should point down to a specific version, such as CodeLine_240"
+      },
+      {
+        "name": "CHRE_TARGET_ELF_READER",
+        "type": "file",
+        "description": "The path to the elf reader provided by the toolchain",
+        "default": "$RISCV_TOOLCHAIN_PATH/bin/llvm-readelf"
       }
     ],
     "targets": [

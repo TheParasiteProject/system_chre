@@ -241,6 +241,16 @@ void validateCenterFreq(const chreWifiScanResult &result, uint32_t apiVersion) {
   }
 }
 
+void validateVenueInfo(const chreWifiScanResult &result) {
+  // Flag an error if venueGroup or venueType is a reserved value
+  // For a given venueGroup, flag an error if the venueType is a reserved value.
+  uint8_t firstReservedValueTable[13] = {1, 16, 10, 4, 2, 6, 6, 5, 1, 1, 8, 7, 6};
+  EXPECT_LT_OR_RETURN(result.venueGroup, 13, "venueGroup is a reserved value");
+  EXPECT_LT_OR_RETURN(result.venueType,
+                      firstReservedValueTable[result.venueGroup],
+                      "venueType is a reserved value for the given venueGroup");
+}
+
 /**
  * Validates that RSSI is within sane limits.
  */
@@ -628,6 +638,7 @@ void BasicWifiTest::validateWifiScanResult(uint8_t count,
     validateFreqAndChannel(results[i].primaryChannel, results[i].band,
                            mApiVersion);
     validateCenterFreq(results[i], mApiVersion);
+    validateVenueInfo(results[i]);
   }
 }
 

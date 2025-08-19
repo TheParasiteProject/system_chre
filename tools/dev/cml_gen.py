@@ -29,14 +29,7 @@ import argparse
 import os
 import re
 import subprocess
-import sys
-
-
-# TODO(b/374392644) - Have a common util for helper functions like _fatal_error
-def _fatal_error(message: str):
-  """Prints an error message in red to stderr and exits the script."""
-  print(f"\033[31m{message}\033[0m\n", file=sys.stderr)
-  sys.exit(1)
+from shell_util import fatal_error
 
 
 def _write_header(output, project_name):
@@ -291,7 +284,7 @@ def main():
   ).stdout.splitlines()
 
   if result[-1].endswith('Stop.'):
-    _fatal_error(f'Failed to build the project:\n{result[-1]}\n')
+    fatal_error(f'Failed to build the project:\n{result[-1]}\n')
 
   _parse_compilation_output(args, result)
 

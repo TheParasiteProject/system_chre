@@ -47,6 +47,7 @@
 
 #include "common.h"
 #include <chre/common.h>
+#include <chre/wifi_types.h>
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -87,6 +88,11 @@ extern "C" {
 //! services via chreWifiNanRequestRangingAsync()
 //! @since v1.6
 #define CHRE_WIFI_CAPABILITIES_NAN_SUB           (UINT32_C(1) << 4)
+
+//! Specifies if the platform supports the venue info field (venueGroup and
+//! venueType) in the scan results (chreWifiScanResult).
+//! @since v1.12
+#define CHRE_WIFI_CAPABILITIES_VENUE_INFO        (UINT32_C(1) << 5)
 
 /** @} */
 
@@ -641,8 +647,26 @@ struct chreWifiScanResult {
     int8_t rssiChain0;
     int8_t rssiChain1;  //!< @see #rssiChain0
 
+    //! Provides information about the place where this AP is located,
+    //! for example if it is in a building or vehicle.
+    //! Note that venueType and venueGroup are defined in this order to match
+    //! the endianness of the venueInfo field, and fits the following format:
+    //! venueInfo = (venueGroup << 8) | venueType
+    //! @see #chreWifiVenueGroup
+    //! @see #chreWifiVenueInfo
+    //! @since v1.12
+    union {
+      struct {
+          uint8_t venueType;
+          uint8_t venueGroup;
+      };
+      uint16_t venueInfo;
+    };
+
+    //! @since v1.12
+
     //! Reserved; set to 0
-    uint8_t reserved[7];
+    uint8_t reserved[5];
 };
 
 /**

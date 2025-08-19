@@ -1,47 +1,66 @@
 # CHRE Development Tools
 
 This directory contains tools and configuration files for setting up a development
-environment for CHRE.
+environment for CHRE. The [Usage](#usage) section explains how one can use it.
+The [Configuration](#configuration) section explains the setup of shell environment variables
+through
+`env_config.json`. Some of the [Python scripts](#public) are designed to be used as a standalone
+tool to facilitate various needs.
 
 ## Usage
 
-TODO(b/374392644) - Add explanations about how to use these tools.\
 TODO(b/374392644) - `chre_lunch` should support listing all supported platform-target combinations.
 
 ### Set up the environment
 
-To initiate the CHRE development environment, follow these steps:
+To initiate the CHRE development environment, run `source env_setup.sh` to initiate shell commands,
+which will enable commands like
+`chre_lunch`, etc.
 
-1. Run `source env_setup.sh` to initiate shell commands, which will enable commands like
-   `chre_lunch`, etc.
-2. Run `chre_lunch <platform-target>` to set up environment for a specific platform and target
-   combination. For example, to start development of nanoapp on tinysys platform, run
-   `chre_lunch tinysys-nanoapp`.
+Below is a list of the commands available after sourcing the `env_setup.sh` script.
 
-### Build a target
-
-After setting up the environment for a specific platform and target combination, a CHRE target
-(e.g., `nanoapp` or `libchre`) can be built by running `chre_make` from
-the folder where the target is defined. To generate `CMakeLists.txt` and `compile_commands.json`
-simply add `-C` option to `chre_make`. An additional source path can be provided using `-s`, which
-fits for the project that the build folder is separated from the src folder. For example:
-
-```
-chre_make -C -s ../../src/general_test
-```
-
-NOTE: When `-C` is provided `chre_make` will not actually build the target. This is because the
-dryrun output is used to generate `CMakeLists.txt` and `compile_commands.json`. Therefore to build
-the binary please do not add `-C`.
-
-### Commands available
-
-TODO(b/374392644) - describe the shell commands available to use after the environment is set up.
+#### Commands list
 
 - `chre_envs`: Prints all the environment variables set up for CHRE development.
 - `chre_lunch <platform-target>`: Sets up the environment for specific platform and target
   combination.
 - `chre_make [-C] [-s <src_path>]`: Builds the CHRE target.
+- `chre_flash [-R]`: Flash the device with a signed binary.
+
+Now running `chre_lunch <platform-target>` will set up environment for a specific platform and
+target combination. For example, to start development of nanoapp on tinysys platform, run
+`chre_lunch tinysys-nanoapp`. This step is required to enable `chre_make` and `chre_flash` to work.
+
+### Build a target
+
+After setting up the environment for a specific platform and target combination, a CHRE target
+(e.g., `nanoapp` or `libchre`) can be built by running `chre_make` from the folder where the target
+Makefile is defined.
+
+The command will also sign the binary and check if there are any external symbols that are
+unresolvable.
+
+#### Use `-C` option to generate `CMakeLists.txt` and `compile_commands.json`
+
+When `-C` option is provided, `chre_make`can generate `CMakeLists.txt` and `compile_commands.json`.
+An additional source path can be provided using `-s`, which fits for the project that the build
+folder is separated from the src folder. For example:
+
+```
+chre_make -C -s ../../src/general_test
+```
+
+Note that `chre_make` will only generate above two files when `-C` is provided. This is because the
+dryrun output of making the target is used extract source files, include directories, compiler
+flags, and macro definitions. Therefore to generate the target binary please do not add `-C`.
+
+### Copy the target onto the device
+
+After building the target, it can be flashed onto the device by running `chre_flash`. The location
+that the binary is copied to is determined by the setting of "install_location" in the
+`env_config.json`.
+
+If `-R` option is provided, the device will reboot.
 
 ## Configuration
 
@@ -81,9 +100,6 @@ Each platform configuration object has the following fields:
 
 ### Target Configuration Fields
 
-TODO(b/374392644) - Add explanations about the command to install the nanoapp for
-`install_location`.
-
 Each object within the `targets` array defines a specific build target and has the following
 fields:
 
@@ -122,11 +138,9 @@ spawned child shell sessions. Each environment variable object has the following
 
 ### Actions
 
-TODO(b/374392644) - add a link to the corresponding python script.
-
 Actions are compound operations that are not easy to fulfil with simple shell commands. Predefined
 actions listed below are supported. Behind the scene they are executed though dedicated python
-functions.
+functions defined in `env_setup.py`.
 
 - `action_clone_repo`: Clones a git repository. The parameters are:
     - Repository URL (string, required): The URL of the git repository to clone.
@@ -146,19 +160,33 @@ functions.
 
 ## Python Scripts
 
-TODO(b/374392644) - describe the purpose of the Python scripts in this directory and how to use them
-separately.
-
 ### Internal
 
 Scripts listed here are used internally by the shell commands. Using them directly is not supported.
 
 - `env_setup.py`: A helper script used to set up the CHRE development environment. It is used
   internally by the shell script `env_setup.sh`.
+- `flash.py`: A tool to flash the device with a signed binary.
+- `shell_util.py`: A utility library for shell scripts.
 
 ### public
 
 Scripts listed here are can also be used as a stand-alone tool to facilitate special needs.
 
-- `cml_gen.py`: A script to generate `CMakeLists.txt` and `compile commands.json` files for the
-  corresponding target.
+- `cml_gen.py`: Generates `CMakeLists.txt` and `compile commands.json` files for the corresponding
+  CHRE target.
+- `check_nanoapp_symbols.py`: Checks dynamic symbols and find out if any of them is unresolvable.
+- `tinsys_nanoapp_signer.py`: A tool to sign nanoapps for tinysys.
+
+## Python Packages
+
+There are two package list files used to specifiy what packages are needed:
+
+- `requirements.txt`: The general list of packages. New package should be added here.
+- `requirements_protobuf.txt`: The list for protobuf specifically.
+
+A reason to have a separate requirement file for protobuf is to avoid an infinite dependency
+overriding loop observed when multiple packages fetch different versions of protobuf.
+
+TODO(b/374392644) - Consider separate requirements based on different platform and target
+combinations.

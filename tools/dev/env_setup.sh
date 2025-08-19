@@ -194,8 +194,34 @@ chre_make() {
     mkdir -p $signed_path
   fi
 
-  # TODO(b/374392644) - Add support for signing
-  # TODO(b/374392644) - Add support for external symbols checking
+  # Signing
+  if [[ $CHRE_PLATFORM == "qsh" ]]; then
+    python3 "$HEXAGON_SDK_PREFIX/tools/elfsigner/elfsigner.py" --no_disclaimer -i "$so_file" -o "$signed_path"
+  elif [[ $CHRE_PLATFORM == "tinysys" ]]; then
+    if [[ "$CHRE_TARGET_TYPE" == "nanoapp" ]]; then
+      python3 "$CHRE_DEV_SCRIPT_PATH/tinysys_nanoapp_signer.py" "$TEST_SIGN_KEY" "$so_file" "$signed_path"
+    fi
+  else
+    echo "Unsupported platform '$CHRE_PLATFORM' for signing"
+  fi
+
+  # Checking external symbols
+  if [[ $CHRE_TARGET_TYPE == "nanoapp" ]]; then
+    python3 "$CHRE_DEV_SCRIPT_PATH/check_nanoapp_symbols.py" --nanoapp "$so_file"
+  fi
+}
+
+#######################################
+# Builds and flashes a CHRE target to a device.
+#
+# This function first calls `chre_make` to build the target and then invokes
+# the `flash.py` script to perform the flashing operation.
+# Arguments:
+#   All arguments are passed directly to the flash.py script.
+#######################################
+chre_flash() {
+  chre_make || return 1
+  python3 "$CHRE_DEV_SCRIPT_PATH/flash.py" "$@"
 }
 
 #######################################
