@@ -35,49 +35,20 @@ import argparse
 import os
 import re
 import subprocess
-import sys
 import warnings
 from os import listdir
 from os.path import join
-from shell_util import warning, log_w, success
 
 import pyclibrary
+
+from shell_util import warning, log_w, success
 
 # The number of rows to discard from the output of the elf reader
 NUM_ROWS_TO_DISCARD = 4
 
 
-class PlatformInfo:
-
-  def __init__(self, external_symbol_list="", header_files=None,
-               exported_list_files=None):
-    """Initializes a PlatformInfo object.
-
-    Args:
-      external_symbol_list: Path to a file containing a list of allowed
-        external symbols.
-      header_files: A list of platform-specific header files to parse for
-        allowed symbols.
-      exported_list_files: A list of source files containing
-        ADD_EXPORTED_SYMBOL macros.
-    """
-    self.external_symbol_list = external_symbol_list
-    self.header_files = header_files if header_files else []
-    self.exported_list_files = exported_list_files if exported_list_files else []
-
-
-PLATFORM_INFO = {
-  'tinysys':
-    PlatformInfo(
-      exported_list_files=[
-        f"{os.getenv('ANDROID_BUILD_TOP')}/system/chre/platform/shared/nanoapp_loader.cc",
-        f"{os.getenv('ANDROID_BUILD_TOP')}/system/chre/platform/tinysys/include/chre/extensions/platform/symbol_list.h"]),
-  'qsh':
-    PlatformInfo(
-      external_symbol_list=f"{os.getenv('SSC_PREFIX')}/platform/exports/dl_base_symbols.lst",
-      header_files=[f"{os.getenv('QSH_PREFIX')}/qsh/shim/platform/ssc/include/init.h"],
-    )
-}
+def _get_env_list(env_var_name: str):
+  return os.getenv(env_var_name).split(":") if env_var_name in os.environ else []
 
 
 def _get_known_exported_functions() -> list:
@@ -94,8 +65,8 @@ def _get_known_exported_functions() -> list:
   regex = r'ADD_EXPORTED_SYMBOL\s*\([^,]+,\s*"([^"]+)"\)|' \
           r'ADD_EXPORTED_C_SYMBOL\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)'
 
-  exported_list_files = PLATFORM_INFO[os.environ['CHRE_PLATFORM']].exported_list_files
-  for file in exported_list_files:
+  exported_macro_files = _get_env_list("EXPORTED_MACRO_FILES")
+  for file in exported_macro_files:
     symbols = []
     with open(file, 'r') as f:
       for line in f:
@@ -126,7 +97,7 @@ def _get_allowed_symbols() -> list:
   for f in listdir(chre_api_path + '/chre'):
     header_files.append(join(chre_api_path + '/chre', f))
   header_files.append(join(chre_api_path, 'chre.h'))
-  header_files.extend(PLATFORM_INFO[os.environ['CHRE_PLATFORM']].header_files)
+  header_files.extend(_get_env_list('EXTERNAL_SYMBOL_DECLARATIONS'))
   fnames = []
 
   # suppress warnings from pyclibrary parsing headers
@@ -142,12 +113,12 @@ def _get_allowed_symbols() -> list:
   print(f"{len(fnames)} dynamic symbols found in chre header files")
   fnames.extend(_get_known_exported_functions())
 
-  platform_allowed_symbol_file = PLATFORM_INFO[os.environ['CHRE_PLATFORM']].external_symbol_list
-  if platform_allowed_symbol_file and os.path.exists(platform_allowed_symbol_file):
-    with open(platform_allowed_symbol_file) as f:
+  lst_files = _get_env_list("EXTERNAL_SYMBOL_LISTS")
+  for lst_file in lst_files:
+    with open(lst_file) as f:
       platform_external_symbols = [s.strip() for s in f.readlines()]
       print(
-        f"{len(platform_external_symbols)} dynamic symbols found in {platform_allowed_symbol_file}")
+        f"{len(platform_external_symbols)} dynamic symbols found in {lst_file}")
       fnames.extend(platform_external_symbols)
   return fnames
 

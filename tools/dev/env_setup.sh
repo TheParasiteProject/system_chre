@@ -255,12 +255,10 @@ chre_lunch() {
   echo "NOTE: A default value is provided in the parenthesis when possible"
   echo ""
 
-  commands=`python3 $CHRE_DEV_SCRIPT_PATH/env_setup.py -p "$@"` && \
+  commands=`python3 $CHRE_DEV_SCRIPT_PATH/env_setup.py "$@"` && \
   echo "exporting environment variables..." && \
   while read -r -u 3 command; do  # Read from fd 3 to save stdin for user input
-    if [[ "$command" == "action_"* ]]; then
-      python3 $CHRE_DEV_SCRIPT_PATH/env_setup.py --action $command
-    elif [[ "$command" == "export "* ]]; then
+    if [[ "$command" == "export "* ]]; then
       # Using eval to make spaces and parenthesis in the array definition work
       eval $command
     else

@@ -34,9 +34,19 @@ def success(message: str):
   print(f"{message}\033[0m")
 
 
+def log_e(message: str):
+  """Prints an error log in red to stderr."""
+  print(f"\033[31m{message}\033[0m\n", file=sys.stderr)
+
+
 def log_w(message: str):
   """Prints a warning log in yellow to stderr."""
   print(f"\033[33m{message}\033[0m\n", file=sys.stderr)
+
+
+def log_i(message: str):
+  """Prints a log to stderr."""
+  print(f"{message}", file=sys.stderr)
 
 
 def get_input_from_shell(prompt: str) -> str:
