@@ -17,10 +17,13 @@
 #include "chre_api/chre/re.h"
 
 #include <cstdint>
+#include <optional>
 
 #include "chre/core/event_loop_manager.h"
 #include "chre/platform/log.h"
 #include "chre/platform/memory_manager.h"
+#include "chre/util/dynamic_vector.h"
+#include "chre/util/nanoapp/nanoapp_allocator_provider.h"
 #include "chre_api/chre/event.h"
 
 #include "gtest/gtest.h"
@@ -251,6 +254,51 @@ TEST_F(MemoryTest, MemoryStressTestShouldNotTriggerErrors) {
 
   // Automatic cleanup.
   unloadNanoapp(appId);
+  EXPECT_EQ(memManager.getTotalAllocatedBytes(), 0);
+  EXPECT_EQ(memManager.getAllocationCount(), 0);
+}
+
+TEST_F(MemoryTest, NanoappAllocatorProvider) {
+  CREATE_CHRE_TEST_EVENT(PUSH, 0);
+  CREATE_CHRE_TEST_EVENT(CLEAR, 1);
+
+  class App : public TestNanoapp {
+   public:
+    void handleEvent(uint32_t, uint16_t eventType,
+                     const void *eventData) override {
+      if (eventType == CHRE_EVENT_TEST_EVENT) {
+        auto event = static_cast<const TestEvent *>(eventData);
+        switch (event->type) {
+          case PUSH:
+            if (!mVec.has_value()) mVec.emplace();
+            mVec->push_back(0x1337);
+            triggerWait(PUSH);
+            break;
+          case CLEAR:
+            mVec.reset();
+            triggerWait(CLEAR);
+            break;
+        }
+      }
+    }
+
+   private:
+    // Note that we put this in an optional wrapper because the simulator
+    // currently does not destroy test app objects with a valid nanoapp context
+    std::optional<DynamicVector<int32_t, NanoappAllocatorProvider>> mVec;
+  };
+
+  MemoryManager &memManager =
+      EventLoopManagerSingleton::get()->getMemoryManager();
+  uint64_t appId = loadNanoapp(MakeUnique<App>());
+  EXPECT_EQ(memManager.getTotalAllocatedBytes(), 0);
+  EXPECT_EQ(memManager.getAllocationCount(), 0);
+
+  sendEventToNanoappAndWait(appId, PUSH, PUSH);
+  EXPECT_GT(memManager.getTotalAllocatedBytes(), 0);
+  EXPECT_EQ(memManager.getAllocationCount(), 1);
+
+  sendEventToNanoappAndWait(appId, CLEAR, CLEAR);
   EXPECT_EQ(memManager.getTotalAllocatedBytes(), 0);
   EXPECT_EQ(memManager.getAllocationCount(), 0);
 }
