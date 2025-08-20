@@ -36,12 +36,12 @@ def success(message: str):
 
 def log_e(message: str):
   """Prints an error log in red to stderr."""
-  print(f"\033[31m{message}\033[0m\n", file=sys.stderr)
+  print(f"\033[31m{message}\033[0m", file=sys.stderr)
 
 
 def log_w(message: str):
   """Prints a warning log in yellow to stderr."""
-  print(f"\033[33m{message}\033[0m\n", file=sys.stderr)
+  print(f"\033[33m{message}\033[0m", file=sys.stderr)
 
 
 def log_i(message: str):

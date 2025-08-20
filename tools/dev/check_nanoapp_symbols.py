@@ -104,13 +104,17 @@ def _get_allowed_symbols() -> list:
   warnings.simplefilter('ignore', SyntaxWarning)
   try:
     for h in header_files:
-      # pyclibrary cannot find functions that have a vararg parameter
-      pyc_parser = pyclibrary.CParser(h, replace={r', \.\.\.': ''})
+      # pyclibrary cannot find functions that
+      #  - have a vararg parameter
+      #  - have a trailing macro
+      # so removing them from the header file before parsing
+      pyc_parser = pyclibrary.CParser(h, replace={r', \.\.\.': '', r'[A-Z_]+;': ';'})
       fnames.extend(list(pyc_parser.defs['functions'].keys()))
   finally:
     warnings.simplefilter('default', SyntaxWarning)
 
   print(f"{len(fnames)} dynamic symbols found in chre header files")
+
   fnames.extend(_get_known_exported_functions())
 
   lst_files = _get_env_list("EXTERNAL_SYMBOL_LISTS")
