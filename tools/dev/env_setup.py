@@ -16,20 +16,15 @@
 
 """A script to set up the CHRE development environment.
 
-This script should only be incurred by a shell script and can be run in two modes:
+This script should only be incurred by a shell script.
 
-1. Interactive environment setup:
-   When run with a platform-target combination (e.g., `python env_setup.py -p <platform>-<target>`),
-   it interactively prompts the user for necessary environment variables based on
-   the env_config.json file. It then generates a series of 'export' commands
-   that can be executed by the shell to configure the environment, along with necessary action
-   function calls that can be incurred later (see below).
+When run with a platform-target combination (e.g., `python env_setup.py -p <platform>-<target>`),
+it interactively prompts the user for necessary environment variables based on
+the env_config.json file. It then generates a series of <name>-<value> pairs that can be
+exported by the shell to configure the environment. If a `default_action` is provided with a
+default value together the action will be incurred before exporting the default value.
 
-   The result is printed to stdout and piped into the shell to set the environment variables.
-
-2. Standalone actions:
-   When run with the --action flag (e.g., `python env_setup.py --action action_clone_repo ...`),
-   it performs specific, one-off tasks based on the action name provided.
+The result is printed to stdout and piped into the shell to set the environment variables.
 """
 import argparse
 import json
@@ -39,7 +34,12 @@ import subprocess
 import sys
 from typing import Any
 
-from shell_util import log_i, fatal_error
+from shell_util import log_i, log_w, fatal_error
+
+
+def _print_env_var_pair(env_var: str):
+  env_name, env_value = re.match(r"(.*)=(.*)", env_var).groups()
+  print(f"\033[32m{env_name}\033[0m = {env_value}", file=sys.stderr)
 
 
 class _CustomArgumentParser(argparse.ArgumentParser):
@@ -52,7 +52,7 @@ class _CustomArgumentParser(argparse.ArgumentParser):
     )
 
 
-def _get_input_from_shell(prompt: str) -> str:
+def _get_input_from_shell(prompt: str, color: str = None) -> str:
   """Prompts the user for input from the shell and returns the response.
 
   Args:
@@ -61,6 +61,14 @@ def _get_input_from_shell(prompt: str) -> str:
   Returns:
     The string entered by the user.
   """
+  if color == 'green':
+    prompt = f"\033[32m{prompt}\033[0m"
+  elif color == 'yellow':
+    prompt = f"\033[33m{prompt}\033[0m"
+  elif color == 'red':
+    prompt = f"\033[31m{prompt}\033[0m"
+  else:
+    pass
   print(prompt, end="", file=sys.stderr, flush=True)
   return input()
 
@@ -75,7 +83,7 @@ def _action_clone_repo(url: str, branch: str, dest: str) -> None:
   """
   if os.path.exists(dest):
     answer = _get_input_from_shell(
-      f"{dest} already exists. Shall we override it? (y/N):")
+      f"{dest} already exists. Shall we override it? (y/N):", color="yellow")
     if not answer or answer.lower() == 'n':
       log_i(f"Skipping clone operation for {dest}")
       return
@@ -179,7 +187,7 @@ def _load_config(config_file: str = None) -> Any:
 def _parse_platform_and_target_configs(
     config_data: Any, platform_and_target: str
 ):
-  """Parses config data to find commands and env vars for a platform-target.
+  """Parses config data to find predefined env vars for a platform-target.
 
   Args:
     config_data: The parsed JSON configuration data.
@@ -235,9 +243,10 @@ def _parse_env_variable_fields(env_vars, predefined_envs):
   """Interactively prompts for and processes environment variables.
 
   Iterates through a list of environment variable definitions, prompts the user
-  for values, validates them, and generates the necessary 'export' commands. If a
+  for values, validates them, and generates <name>=<value> pairs. If a
   default value is provided and no user input is given, the default value will
-  be used. Adds default action to the commands list too if it is specified.
+  be used. When a default action is provided, it will be executed if the default
+   value is used.
 
   Args:
     predefined_envs: A dict of environment variables pre-defined for the platform
@@ -246,47 +255,47 @@ def _parse_env_variable_fields(env_vars, predefined_envs):
       environment variable customizable by the user.
 
   Returns:
-    A list of shell commands (strings) to set the environment variables.
+    A list of <name>=<value> pairs representing the environment variables.
   """
   all_env_names = set(predefined_envs)
-  commands = [f"export {k}={v}" for k, v in predefined_envs.items()]
+  env_var_pairs = [f"{k}={v}" for k, v in predefined_envs.items()]
   for env_var in env_vars:
     try:
-      if env_var["name"] in all_env_names:
-        fatal_error(f"Duplicate env variable name: {env_var["name"]}")
-      all_env_names.add(f"{env_var["name"]}")
+      env_name = env_var["name"]
+      if env_name in all_env_names:
+        fatal_error(f"Duplicate env variable name: {env_name}")
+      all_env_names.add(f"{env_name}")
       default_value = env_var.get("default")
       default_action = env_var.get("default_action", [])
-      prompt = f"{env_var["name"]}"
+      prompt = f"{env_name}"
       if default_value is not None:
-        prompt = "{} ({})".format(env_var["name"], default_value if default_value else "EMPTY")
-
-      print(f"\n{env_var["description"]}", file=sys.stderr)
+        prompt = "{} ({})".format(env_name, default_value if default_value else "EMPTY")
+      print("\n{}".format(env_var.get("description", "")), file=sys.stderr)
       user_entered_value = _get_input_from_shell(f"{prompt}: ").strip()
 
       if user_entered_value:
-        expanded_value = _assert_and_expand_env_variable(env_var["name"], env_var["type"],
+        expanded_value = _assert_and_expand_env_variable(env_name, env_var["type"],
                                                          user_entered_value)
-        commands.append(f"export {env_var["name"]}={expanded_value}")
+        env_var_pairs.append(f"{env_name}={expanded_value}")
         # User entered a value, skip the default action
         continue
 
       # Either user has to enter a value or default_value must be provided
       if default_value is None:
-        fatal_error(f"{env_var["name"]} must be provided. Please try it again")
+        fatal_error(f"{env_name} must be provided. Please try it again")
 
       if default_action:
         _run_action(default_action)
       # Default action is supposed to have made the default value valid
-      expanded_value = _assert_and_expand_env_variable(env_var["name"], env_var["type"],
+      expanded_value = _assert_and_expand_env_variable(env_name, env_var["type"],
                                                        default_value)
-      commands.append(f"export {env_var["name"]}={expanded_value}")
+      env_var_pairs.append(f"{env_name}={expanded_value}")
     except KeyError as e:
       fatal_error(f"The environment variable doesn't have the field '{e.args[0]}'")
 
   # Create CHRE_ENVS to record all the env variables to be created
-  commands.append("export CHRE_ENVS=(" + ' '.join(sorted(all_env_names)) + ")")
-  return commands
+  env_var_pairs.append("CHRE_ENVS=(" + ' '.join(sorted(all_env_names)) + ")")
+  return env_var_pairs
 
 
 def main():
@@ -302,13 +311,32 @@ def main():
     "-c", "--config", type=str
   )
 
+  env_vars_file = os.path.join(os.environ["CHRE_DEV_PATH"], "env_vars.txt")
+  if os.path.exists(env_vars_file):
+    # output the env variables in env_vars.txt
+    with open(env_vars_file, "r") as f:
+      log_w("The following env variables are previously entered:\n")
+      predefined_vars = []
+      for env_var_pair in f:
+        _print_env_var_pair(env_var_pair)
+        predefined_vars.append(env_var_pair.strip())
+      answer = _get_input_from_shell("\nShall we keep using them? (Y/n):", color="yellow")
+      if not answer or answer.lower() == 'y':
+        print("\n".join(predefined_vars))
+        return
+      else:
+        log_w("Overriding the existing dev environment settings...\n")
+
   args = arg_parser.parse_args()
   config_data = _load_config(args.config)
   fixed_env_map, target_envs_configs = _parse_platform_and_target_configs(config_data,
                                                                           args.platform_and_target)
-  commands = _parse_env_variable_fields(target_envs_configs, fixed_env_map)
+  env_var_pairs = _parse_env_variable_fields(target_envs_configs, fixed_env_map)
 
-  print("\n".join(commands))
+  with open(env_vars_file, "w") as f:
+    f.write("\n".join(env_var_pairs))
+
+  print("\n".join(env_var_pairs))
   return
 
 

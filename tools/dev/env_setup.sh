@@ -31,6 +31,12 @@ pushd $CHRE_DEV_SCRIPT_PATH > /dev/null
 source ../common.sh
 popd > /dev/null
 
+# CHRE_DEV_PATH is the root directory containing env configs for CHRE development
+export CHRE_DEV_PATH=`realpath ~/.chre_dev`
+mkdir -p $CHRE_DEV_PATH
+# CHRE_PY_VENV_PATH is the path to the python virtual environment for CHRE development
+export CHRE_PY_VENV_PATH=$CHRE_DEV_PATH/venv
+
 #######################################
 # Sets up pyenv to use the required Python version.
 # Globals:
@@ -107,7 +113,21 @@ _setup_python_virtual_env() {
   echo "Preparing to install python packages..."
   if [[ -z "$VIRTUAL_ENV" ]]; then
     echo "The installation of python packages must be done in a virtual environment."
-    echo -n "Shall we create one for you? [Y/n] "
+
+    # check if there is already a python version exists under $CHRE_PY_VENV_PATH/bin/
+    if [[ -f "$CHRE_PY_VENV_PATH/bin/python" ]]; then
+      local venv_py_version=$($CHRE_PY_VENV_PATH/bin/python --version | awk '{print $2}')
+      if [[ -z "$CHRE_PYTHON_VERSION" || "$venv_py_version" == "$CHRE_PYTHON_VERSION" ]]; then
+        echo "Activating existing virtual environment under $CHRE_PY_VENV_PATH"
+        source $CHRE_PY_VENV_PATH/bin/activate
+        _install_py_pkgs || return 1
+        return
+      else
+        echo "The virtual environment under $CHRE_PY_VENV_PATH has python version $venv_py_version but $CHRE_PYTHON_VERSION is required."
+      fi
+    fi
+
+    echo -n "Shall we create a new one for you? [Y/n] "
     read user_response
     if [[ "$user_response" == "y" || "$user_response" == "Y" || "$user_response" == "" ]]; then
       if [[ "$need_a_different_py_version" == "true" ]]; then
@@ -115,15 +135,14 @@ _setup_python_virtual_env() {
         _setup_pyenv || return 1
       fi
       # Create and activate the virtual environment
-      local chre_venv_path="/tmp/chre_venv"
-      if [[ -d "$chre_venv_path" ]]; then
-        echo "'${chre_venv_path}' exists. Removing it..."
-        rm -rf "$chre_venv_path"
+      if [[ -d "$CHRE_PY_VENV_PATH" ]]; then
+        echo "'$CHRE_PY_VENV_PATH' exists. Removing it..."
+        rm -rf "$CHRE_PY_VENV_PATH"
       fi
-      echo "Creating a new virtual environment '${chre_venv_path}' with Python $CHRE_PYTHON_VERSION..."
-      python -m venv "$chre_venv_path" || return 1
+      echo "Creating a new virtual environment '$CHRE_PY_VENV_PATH' with Python $CHRE_PYTHON_VERSION..."
+      python -m venv "$CHRE_PY_VENV_PATH" || return 1
       echo "Activating virtual environment..."
-      source ${chre_venv_path}/bin/activate
+      source $CHRE_PY_VENV_PATH/bin/activate
     else
       echo -e "\nPlease create a virtual environment and try again."
       return 1
@@ -258,14 +277,7 @@ chre_lunch() {
   commands=`python3 $CHRE_DEV_SCRIPT_PATH/env_setup.py "$@"` && \
   echo "exporting environment variables..." && \
   while read -r -u 3 command; do  # Read from fd 3 to save stdin for user input
-    if [[ "$command" == "export "* ]]; then
-      # Using eval to make spaces and parenthesis in the array definition work
-      eval $command
-    else
-      echo "Unknown command '$command'"
-      onExit && return 1
-    fi
-
+    eval "export $command"
     if [[ $? -ne 0 ]]; then
       onExit && return 1
     fi
