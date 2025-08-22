@@ -628,11 +628,11 @@ const char *AppManager::GetExtConfigNameFromTag(pb_size_t config_tag) {
 void AppManager::HandleHostAwakeEvent() {
   // Send tracker reports to host when receive host awake event.
   uint64_t current_time = chreGetTime();
-  uint64_t flush_threshold_nanosec =
-      tracker_filter_.GetBatchConfig().opportunistic_flush_threshold_time_ms *
-      chre::kOneMillisecondInNanoseconds;
-  if (current_time - last_tracker_report_flush_time_nanosec_ >=
-      flush_threshold_nanosec) {
+  uint64_t flush_threshold_nanosec = tracker_filter_.GetBatchConfig()
+      .opportunistic_flush_threshold_time_ms
+      * chre::kOneMillisecondInNanoseconds;
+  if (current_time - last_tracker_report_flush_time_nanosec_
+      >= flush_threshold_nanosec) {
     LOGD("Flush tracker reports by host awake event.");
     SendTrackerReportsToHost(tracker_storage_.GetBatchReports());
     tracker_storage_.Clear();
