@@ -24,6 +24,7 @@
 #include "chre/core/ble_l2cap_coc_socket_data.h"
 #include "chre/core/event_loop_manager.h"
 #include "chre/platform/linux/pal_ble.h"
+#include "chre/util/macros.h"
 #include "chre_api/chre.h"
 #include "pw_bluetooth/emboss_util.h"
 #include "pw_bluetooth/hci_common.emb.h"
@@ -529,6 +530,7 @@ TEST_F(BleSocketTest, BleSocketBasicReceiveTest) {
   };
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
+  UNUSED_VAR(appId);
 
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
@@ -766,6 +768,7 @@ TEST_F(BleSocketTest, BleSocketClosedAfterHostMessageTest) {
   };
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
+  UNUSED_VAR(appId);
 
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
