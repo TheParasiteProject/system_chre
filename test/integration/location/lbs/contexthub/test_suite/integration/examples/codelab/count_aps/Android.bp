@@ -36,7 +36,6 @@ cc_test_host {
         "absl_flags_flag",
         "chre_integration_lib",
         "chre_linux_integration",
-        "count_aps_nanoapp",
         "event_logger",
         "libgtest",
         "libgtest_main",
@@ -48,32 +47,4 @@ cc_test_host {
         "libutils",
     ],
     test_suites: ["general-tests"],
-}
-
-cc_library_static {
-    name: "count_aps_nanoapp",
-    srcs: [
-        "count_aps_nanoapp.cc",
-    ],
-    header_libs: [
-        "chre_api",
-        "chre_integration_headers",
-    ],
-    defaults: [
-        "chre_linux_integration_cflags",
-    ],
-    cflags: [
-        "-DCHRE_MESSAGE_TO_HOST_MAX_SIZE=4096", // Needed to import CHRE APIs.
-        "-DCHRE_MINIMUM_LOG_LEVEL=CHRE_LOG_LEVEL_DEBUG",
-        "-DNANOAPP_UNSTABLE_ID=\"local\"",
-        "-DNANOAPP_IS_SYSTEM_NANOAPP=0",
-        "-DNANOAPP_VENDOR_STRING=\"Google\"",
-        "-DNANOAPP_NAME_STRING=\"count_aps_nanoapp\"",
-        "-DNANOAPP_ID=0x12345600000",
-        "-DNANOAPP_VERSION=0x00000001",
-        "-DCHRE_FIRST_SUPPORTED_API_VERSION=CHRE_API_VERSION_1_1",
-        "-DCHRE_NANOAPP_USES_WIFI",
-        "-DCHRE_ASSERTIONS_ENABLED=true",
-    ],
-    host_supported: true,
 }

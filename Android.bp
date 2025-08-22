@@ -1384,7 +1384,6 @@ cc_test_host {
         "libgtest_main",
         "pw_allocator",
         "chre_linux_integration",
-        "count_aps_nanoapp",
     ],
     shared_libs: [
         "libbase",
