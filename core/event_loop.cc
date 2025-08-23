@@ -183,7 +183,7 @@ void EventLoop::run() {
   LOGI("Exiting EventLoop");
 }
 
-bool EventLoop::startNanoapp(UniquePtr<Nanoapp> &nanoapp) {
+bool EventLoop::startNanoapp(UniquePtr<Nanoapp> &&nanoapp) {
   CHRE_ASSERT(!nanoapp.isNull());
   bool success = false;
   auto *eventLoopManager = EventLoopManagerSingleton::get();
@@ -554,6 +554,9 @@ bool EventLoop::allocateAndPostEvent(uint16_t eventType, void *eventData,
   }
   if (!success) {
     LOG_OOM();
+    if (event != nullptr) {
+      mEventPool.deallocate(event);
+    }
   }
 
   return success;

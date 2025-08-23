@@ -152,23 +152,6 @@ class BleSocketTestNanoapp : public TestNanoapp {
   }
 };
 
-class BleSocketConnectApp : public BleSocketTestNanoapp {
- public:
-  void handleEvent(uint32_t, uint16_t eventType,
-                   const void *eventData) override {
-    switch (eventType) {
-      case CHRE_EVENT_BLE_SOCKET_CONNECTION: {
-        auto *event =
-            static_cast<const struct chreBleSocketConnectionEvent *>(eventData);
-        TestEventQueueSingleton::get()->pushEvent(
-            CHRE_EVENT_BLE_SOCKET_CONNECTION, event->socketId);
-        chreBleSocketAccept(event->socketId);
-        break;
-      }
-    }
-  }
-};
-
 struct SocketSendData {
   void *data;
   uint16_t length;
@@ -189,12 +172,47 @@ TEST_F(BleSocketTest, BleSocketCapabilitesTest) {
 }
 
 TEST_F(BleSocketTest, BleSocketAcceptConnectionTest) {
-  uint64_t appId = loadNanoapp(MakeUnique<BleSocketConnectApp>());
+  CREATE_CHRE_TEST_EVENT(NO_OP_EVENT, 1);
+
+  class App : public BleSocketTestNanoapp {
+   public:
+    void handleEvent(uint32_t, uint16_t eventType,
+                     const void *eventData) override {
+      switch (eventType) {
+        case CHRE_EVENT_BLE_SOCKET_CONNECTION: {
+          auto *event =
+              static_cast<const struct chreBleSocketConnectionEvent *>(
+                  eventData);
+          TestEventQueueSingleton::get()->pushEvent(
+              CHRE_EVENT_BLE_SOCKET_CONNECTION, event->socketId);
+          chreBleSocketAccept(event->socketId);
+          break;
+        }
+
+        case CHRE_EVENT_TEST_EVENT: {
+          auto event = static_cast<const TestEvent *>(eventData);
+          switch (event->type) {
+            case NO_OP_EVENT: {
+              TestEventQueueSingleton::get()->pushEvent(NO_OP_EVENT);
+              break;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  uint64_t appId = loadNanoapp(MakeUnique<App>());
 
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
       .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
+
+  // This ensures that the socket open response has been sent.
+  sendEventToNanoapp(appId, NO_OP_EVENT);
+  waitForEvent(NO_OP_EVENT);
+
   EXPECT_TRUE(getSocketOpenSuccess());
 }
 
@@ -697,7 +715,24 @@ TEST_F(BleSocketTest, BleSocketBtResetTest) {
 }
 
 TEST_F(BleSocketTest, BleSocketClosedAfterUnloadTest) {
-  uint64_t appId = loadNanoapp(MakeUnique<BleSocketConnectApp>());
+  class App : public BleSocketTestNanoapp {
+   public:
+    void handleEvent(uint32_t, uint16_t eventType,
+                     const void *eventData) override {
+      switch (eventType) {
+        case CHRE_EVENT_BLE_SOCKET_CONNECTION: {
+          auto *event =
+              static_cast<const struct chreBleSocketConnectionEvent *>(
+                  eventData);
+          TestEventQueueSingleton::get()->pushEvent(
+              CHRE_EVENT_BLE_SOCKET_CONNECTION, event->socketId);
+          chreBleSocketAccept(event->socketId);
+          break;
+        }
+      }
+    }
+  };
+  uint64_t appId = loadNanoapp(MakeUnique<App>());
 
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()

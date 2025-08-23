@@ -138,7 +138,7 @@ class EventLoop : public NonCopyable {
    *        will have been transferred to be managed by this EventLoop.
    * @return true if the app was started successfully
    */
-  bool startNanoapp(UniquePtr<Nanoapp> &nanoapp);
+  bool startNanoapp(UniquePtr<Nanoapp> &&nanoapp);
 
   /**
    * Stops and unloads a nanoapp identified by its instance ID. The end entry

@@ -1,0 +1,79 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+cc_test_host {
+    name: "count_aps_nanoapp_test",
+    srcs: [
+        "count_aps_nanoapp_test.cc",
+        "count_aps_nanoapp.cc",
+        "count_aps_static_nanoapp.cc",
+    ],
+    header_libs: [
+        "chre_api",
+        "chre_integration_headers",
+    ],
+    defaults: [
+        "chre_linux_integration_cflags",
+    ],
+    static_libs: [
+        "absl_container_flat_hash_set",
+        "absl_container_node_hash_map",
+        "absl_log",
+        "absl_log_check",
+        "absl_flags_flag",
+        "chre_integration_lib",
+        "chre_linux_integration",
+        "count_aps_nanoapp",
+        "event_logger",
+        "libgtest",
+        "libgtest_main",
+        "pw_allocator",
+        "pw_containers",
+    ],
+    shared_libs: [
+        "liblog",
+        "libutils",
+    ],
+    test_suites: ["general-tests"],
+}
+
+cc_library_static {
+    name: "count_aps_nanoapp",
+    srcs: [
+        "count_aps_nanoapp.cc",
+    ],
+    header_libs: [
+        "chre_api",
+        "chre_integration_headers",
+    ],
+    defaults: [
+        "chre_linux_integration_cflags",
+    ],
+    cflags: [
+        "-DCHRE_MESSAGE_TO_HOST_MAX_SIZE=4096", // Needed to import CHRE APIs.
+        "-DCHRE_MINIMUM_LOG_LEVEL=CHRE_LOG_LEVEL_DEBUG",
+        "-DNANOAPP_UNSTABLE_ID=\"local\"",
+        "-DNANOAPP_IS_SYSTEM_NANOAPP=0",
+        "-DNANOAPP_VENDOR_STRING=\"Google\"",
+        "-DNANOAPP_NAME_STRING=\"count_aps_nanoapp\"",
+        "-DNANOAPP_ID=0x12345600000",
+        "-DNANOAPP_VERSION=0x00000001",
+        "-DCHRE_FIRST_SUPPORTED_API_VERSION=CHRE_API_VERSION_1_1",
+        "-DCHRE_NANOAPP_USES_WIFI",
+        "-DCHRE_ASSERTIONS_ENABLED=true",
+    ],
+    host_supported: true,
+}
