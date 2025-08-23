@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
-#include "chre/util/nanoapp/callbacks.h"
+#include "gtest/gtest.h"
 
-#include "chre_api/chre.h"
+#include "chre/util/default_allocator_provider.h"
 
 namespace chre {
+namespace {
 
-void heapFreeMessageCallback(void *message, size_t /* messageSize */) {
-  chreHeapFree(message);
+TEST(DefaultAllocatorProviderTest, TestAllocate) {
+  DefaultAllocatorProvider provider;
+  void *ptr = provider.allocate(10);
+  EXPECT_NE(ptr, nullptr);
+  provider.deallocate(ptr);
 }
 
+}  // namespace
 }  // namespace chre

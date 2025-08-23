@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CHRE_UTIL_DEFAULT_CONTAINER_ALLOCATOR_H_
-#define CHRE_UTIL_DEFAULT_CONTAINER_ALLOCATOR_H_
+#pragma once
 
 #include "chre/util/container_support.h"
 
@@ -25,15 +24,15 @@
 
 namespace chre {
 
-//! A default implementation of the pw::Allocator interface that uses the
-//! the existing container_support.h functionality. When used with the framework
-//! or as a part of a static nanoapp, the framework's allocation mechanism
-//! will be used. When used in a dynamic nanoapp, chreHeapAlloc and chreHeapFree
-//! will be used instead.
-class DefaultContainerAllocator : public pw::Allocator {
+//! A basic implementation of the pw::Allocator interface that uses the
+//! existing allocation functionality provided by container_support.h.
+class DefaultPwAllocator : public pw::Allocator {
  public:
   static constexpr pw::allocator::Capabilities kCapabilities = 0;
 
+  constexpr DefaultPwAllocator() : Allocator(kCapabilities) {}
+
+ private:
   void *DoAllocate(pw::allocator::Layout layout) override {
     return memoryAlloc(layout.size());
   }
@@ -44,5 +43,3 @@ class DefaultContainerAllocator : public pw::Allocator {
 };
 
 }  // namespace chre
-
-#endif  // CHRE_UTIL_DEFAULT_CONTAINER_ALLOCATOR_H_
