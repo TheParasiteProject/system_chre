@@ -17,7 +17,6 @@
 #ifndef CHRE_CORE_STATIC_NANOAPPS_H_
 #define CHRE_CORE_STATIC_NANOAPPS_H_
 
-#include "chre/core/event_loop.h"
 #include "chre/core/nanoapp.h"
 #include "chre/util/unique_ptr.h"
 #include "pw_span/span.h"
@@ -39,16 +38,6 @@ extern const size_t kStaticNanoappCount;
  * FATAL_ERROR.
  */
 void loadStaticNanoapps();
-
-/**
- * The same as above, but allows the caller to specify the event loop to load
- * the nanoapps into, and the list of nanoapp init functions to invoke.
- *
- * @param eventLoop the event loop to load nanoapps into.
- * @param initList the list of nanoapp init functions to load.
- */
-void loadStaticNanoapps(EventLoop &eventLoop,
-                        pw::span<const StaticNanoappInitFunction> initList);
 
 }  // namespace chre
 

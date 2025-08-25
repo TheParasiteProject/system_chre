@@ -65,15 +65,7 @@ void loadStaticNanoapps() {
   if (kStaticNanoappCount > 0) {
     pw::span<const StaticNanoappInitFunction> span(&kStaticNanoappList[0],
                                                    kStaticNanoappCount);
-    loadStaticNanoapps(EventLoopManagerSingleton::get()->getEventLoop(), span);
-  }
-}
-
-void loadStaticNanoapps(EventLoop &eventLoop,
-                        pw::span<const StaticNanoappInitFunction> initList) {
-  for (size_t i = 0; i < initList.size(); i++) {
-    UniquePtr<Nanoapp> nanoapp = initList[i]();
-    eventLoop.startNanoapp(std::move(nanoapp));
+    EventLoopManagerSingleton::get()->getEventLoop().loadStaticNanoapps(span);
   }
 }
 

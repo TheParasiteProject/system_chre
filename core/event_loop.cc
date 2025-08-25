@@ -538,6 +538,14 @@ std::optional<EndpointInfo> EventLoop::getEndpointInfo(uint64_t appId) {
              : std::make_optional(getEndpointInfoFromNanoappLocked(*app));
 }
 
+void EventLoop::loadStaticNanoapps(
+    pw::span<const StaticNanoappInitFunction> initList) {
+  for (auto &initFunc : initList) {
+    UniquePtr<Nanoapp> nanoapp = initFunc();
+    startNanoapp(std::move(nanoapp));
+  }
+}
+
 bool EventLoop::allocateAndPostEvent(uint16_t eventType, void *eventData,
                                      chreEventCompleteFunction *freeCallback,
                                      bool isLowPriority,

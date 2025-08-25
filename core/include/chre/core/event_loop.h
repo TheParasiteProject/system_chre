@@ -23,6 +23,7 @@
 
 #include "chre/core/event.h"
 #include "chre/core/nanoapp.h"
+#include "chre/core/static_nanoapps.h"
 #include "chre/core/timer_pool.h"
 #include "chre/platform/atomic.h"
 #include "chre/platform/mutex.h"
@@ -35,6 +36,7 @@
 #include "chre/util/system/stats_container.h"
 #include "chre/util/unique_ptr.h"
 #include "chre_api/chre/event.h"
+#include "pw_span/span.h"
 
 #ifdef CHRE_STATIC_EVENT_LOOP
 #include "chre/util/system/fixed_size_blocking_queue.h"
@@ -417,6 +419,13 @@ class EventLoop : public NonCopyable {
   inline uint32_t getNumEventsDropped() const {
     return mNumDroppedLowPriEvents;
   }
+
+  /**
+   * Loads a list of static nanoapps specified by the caller.
+   *
+   * @initList The list of static nanoapp initialization functions
+   */
+  void loadStaticNanoapps(pw::span<const StaticNanoappInitFunction> initList);
 
  private:
 #ifdef CHRE_STATIC_EVENT_LOOP
