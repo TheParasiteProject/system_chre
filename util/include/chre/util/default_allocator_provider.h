@@ -28,17 +28,35 @@ namespace chre {
 //! parameter for CHRE containers' allocator types, and is suitable for most
 //! usages, though nanoapps that are commonly used in production should
 //! typically prefer NanoappAllocatorProvider.
+//! Note that allocation providers are never expected to initialize memory, so
+//! containers using this provider should either initialize memory themselves
+//! or use one of the memory.h functions.
 class DefaultAllocatorProvider {
  public:
+  //! Allocates uninitialized memory of the given size
   void *allocate(size_t size) {
     return memoryAlloc(size);
   }
 
+  //! Allocates uninitialized memory for an object of type T, which may be
+  //! over-aligned.
   template <typename T>
-  inline T *allocateAlignedArray(size_t count) {
-    return memoryAlignedAllocArray<T>(count);
+  void *allocate() {
+    return allocateArray<T>(1);
   }
 
+  //! Allocates uninitialized memory for an array of objects of type T, which
+  //! may be over-aligned.
+  template <typename T>
+  void *allocateArray(size_t count) {
+    if constexpr (alignof(T) > alignof(std::max_align_t)) {
+      return memoryAlignedAllocArray<T>(count);
+    } else {
+      return allocate(sizeof(T) * count);
+    }
+  }
+
+  //! Deallocates memory allocated by this allocator
   void deallocate(void *ptr) {
     memoryFree(ptr);
   }
