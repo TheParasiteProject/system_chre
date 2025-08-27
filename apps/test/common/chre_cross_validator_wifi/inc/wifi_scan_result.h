@@ -79,7 +79,7 @@ class WifiScanResult {
     return mSsid;
   }
 
-  uint16_t getVenueGroup() const {
+  uint8_t getVenueGroup() const {
     return mVenueGroup;
   }
 
