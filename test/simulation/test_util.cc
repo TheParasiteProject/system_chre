@@ -169,6 +169,7 @@ UniquePtr<Nanoapp> createStaticNanoapp(
   appInfo->entryPoints.end = endFunc;
   appInfo->appVersionString = "<undefined>";
   appInfo->appPermissions = appPerms;
+  appInfo->minChreApiVersion = CHRE_API_VERSION;
   EXPECT_FALSE(nanoapp.isNull());
   nanoapp->loadStatic(appInfo);
 

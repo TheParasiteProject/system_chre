@@ -75,6 +75,14 @@ constexpr int kIsTcmNanoapp = 1;
 constexpr int kIsTcmNanoapp = 0;
 #endif  // CHRE_SLPI_UIMG_ENABLED
 
+//! The minimum CHRE API version required by the nanoapp.
+//! Back compatible features prior to this version are stripped out.
+//! The nanoapp loading will fail if this version is higher than the CHRE system
+//! version.
+#ifndef NANOAPP_MIN_CHRE_API_VERSION
+#define NANOAPP_MIN_CHRE_API_VERSION UINT32_C(0)
+#endif
+
 #if !defined(CHRE_NANOAPP_DISABLE_BACKCOMPAT) && defined(CHRE_NANOAPP_USES_GNSS)
 // Return a v1.3+ GnssLocationEvent for the nanoapp when running on a v1.2-
 // platform.
@@ -187,6 +195,7 @@ extern "C" DLL_EXPORT const struct chreNslNanoappInfo _chreNslDsoNanoappInfo = {
     },
     /* appVersionString */ _chreNanoappUnstableId,
     /* appPermissions */ kNanoappPermissions,
+    /* minChreApiVersion */ NANOAPP_MIN_CHRE_API_VERSION,
 };
 
 const struct chreNslNanoappInfo *getChreNslDsoNanoappInfo() {
