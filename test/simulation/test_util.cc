@@ -100,11 +100,9 @@ void end() {
  * methods can be called.
  */
 void registerNanoapp(UniquePtr<TestNanoapp> app) {
-  if (nanoapps.count(app->id()) != 0) {
-    LOGE("A nanoapp with the same id is already registered");
-  } else {
-    nanoapps[app->id()] = std::move(app);
-  }
+  ASSERT_EQ(nanoapps.count(app->id()), 0)
+      << "A nanoapp with the same id is already registered";
+  nanoapps[app->id()] = std::move(app);
 }
 
 /**
