@@ -55,13 +55,6 @@ flag {
 }
 
 flag {
-  name: "efw_xport_in_context_hub"
-  namespace: "context_hub"
-  description: "Flag guarding the use of the new EFW transport for ContextHub <-> CHRE comms"
-  bug: "369883034"
-}
-
-flag {
   name: "bug_fix_remove_exit_call_in_hal"
   namespace: "context_hub"
   description: "Flag enabling multiclient HAL to gracefully handle connection to CHRE in init/restart"
