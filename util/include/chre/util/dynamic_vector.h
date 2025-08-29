@@ -17,6 +17,7 @@
 #ifndef CHRE_UTIL_DYNAMIC_VECTOR_H_
 #define CHRE_UTIL_DYNAMIC_VECTOR_H_
 
+#include <cstddef>
 #include <type_traits>
 
 #include "chre/util/default_allocator_provider.h"

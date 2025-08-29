@@ -20,12 +20,19 @@
 // chre/apps/). Then, define the UniquePtr created by CHRE_STATIC_NANOAPP_INIT
 // similar to chre/apps/apps.h and add that variable to kStaticNanoappList
 // below.
+#include <cstddef>
+#include <utility>
+
 #ifdef CHRE_INCLUDE_DEFAULT_STATIC_NANOAPPS
 #include "chre/apps/apps.h"
 #endif  // CHRE_INCLUDE_DEFAULT_STATIC_NANOAPPS
+#include "chre/core/event_loop.h"
 #include "chre/core/event_loop_manager.h"
+#include "chre/core/nanoapp.h"
 #include "chre/core/static_nanoapps.h"
 #include "chre/util/macros.h"
+#include "chre/util/unique_ptr.h"
+#include "pw_span/span.h"
 
 namespace chre {
 

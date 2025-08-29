@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 #include "pw_allocator/allocator.h"
 #include "pw_allocator/layout.h"
 

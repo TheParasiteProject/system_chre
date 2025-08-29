@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
+#include <cstdlib>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include "chre/util/pigweed/pw_allocator_provider.h"
-
+#include "pw_allocator/allocator.h"
 #include "pw_allocator/layout.h"
 
 using ::pw::allocator::Layout;

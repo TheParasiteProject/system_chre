@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 #include "chre/util/always_false.h"
 #include "chre_api/chre.h"
 
