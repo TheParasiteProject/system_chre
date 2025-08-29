@@ -72,8 +72,10 @@ void DebugDumpManager::appendNanoappLog(const Nanoapp &nanoapp,
 
 void DebugDumpManager::collectFrameworkDebugDumps() {
   auto *eventLoopManager = EventLoopManagerSingleton::get();
-  mDebugDump.print("CHRE debug dump started @ ts=%" PRIu64 "\n",
-                   SystemTime::getMonotonicTime().toRawNanoseconds());
+  mDebugDump.print("CHRE debug dump started @ ts=%" PRIu64
+                   ", estimatedHostTimeOffset=%" PRId64 "\n",
+                   SystemTime::getMonotonicTime().toRawNanoseconds(),
+                   SystemTime::getEstimatedHostTimeOffset());
   eventLoopManager->getMemoryManager().logStateToBuffer(mDebugDump);
   eventLoopManager->getEventLoop().logStateToBuffer(mDebugDump);
 #ifdef CHRE_SENSORS_SUPPORT_ENABLED
