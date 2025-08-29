@@ -647,6 +647,11 @@ struct chreWifiScanResult {
     int8_t rssiChain0;
     int8_t rssiChain1;  //!< @see #rssiChain0
 
+    //! Reserved; set to 0
+    //! Required to be placed here to maintain 2-byte alignment for the
+    //! venueInfo union which follows
+    uint8_t reserved0[1];
+
     //! Provides information about the place where this AP is located,
     //! for example if it is in a building or vehicle.
     //! Note that venueType and venueGroup are defined in this order to match
@@ -663,10 +668,8 @@ struct chreWifiScanResult {
       uint16_t venueInfo;
     };
 
-    //! @since v1.12
-
     //! Reserved; set to 0
-    uint8_t reserved[5];
+    uint8_t reserved[4];
 };
 
 /**
