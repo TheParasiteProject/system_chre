@@ -17,6 +17,8 @@
 #ifndef CHRE_UTIL_DEFAULT_ALLOCATOR_PROVIDER_H_
 #define CHRE_UTIL_DEFAULT_ALLOCATOR_PROVIDER_H_
 
+#include <cstddef>
+
 #include "chre/util/container_support.h"
 
 namespace chre {

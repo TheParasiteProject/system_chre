@@ -100,11 +100,9 @@ void end() {
  * methods can be called.
  */
 void registerNanoapp(UniquePtr<TestNanoapp> app) {
-  if (nanoapps.count(app->id()) != 0) {
-    LOGE("A nanoapp with the same id is already registered");
-  } else {
-    nanoapps[app->id()] = std::move(app);
-  }
+  ASSERT_EQ(nanoapps.count(app->id()), 0)
+      << "A nanoapp with the same id is already registered";
+  nanoapps[app->id()] = std::move(app);
 }
 
 /**
@@ -169,6 +167,7 @@ UniquePtr<Nanoapp> createStaticNanoapp(
   appInfo->entryPoints.end = endFunc;
   appInfo->appVersionString = "<undefined>";
   appInfo->appPermissions = appPerms;
+  appInfo->minChreApiVersion = CHRE_API_VERSION;
   EXPECT_FALSE(nanoapp.isNull());
   nanoapp->loadStatic(appInfo);
 

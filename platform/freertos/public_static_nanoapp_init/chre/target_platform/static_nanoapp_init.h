@@ -51,6 +51,7 @@
     appInfo.entryPoints.end = nanoappEnd;                                    \
     appInfo.appVersionString = "<undefined>";                                \
     appInfo.appPermissions = appPerms;                                       \
+    appInfo.minChreApiVersion = CHRE_API_VERSION;                            \
     if (nanoapp.isNull()) {                                                  \
       FATAL_ERROR("Failed to allocate nanoapp " #appName);                   \
     } else {                                                                 \
