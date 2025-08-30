@@ -25,6 +25,7 @@ namespace chre {
 
 //! A class that provides allocation and deallocation functionality for
 //! containers using a Pigweed allocator.
+//! @see DefaultAllocatorProvider
 class PwAllocatorProvider {
  public:
   PwAllocatorProvider() = delete;
@@ -34,16 +35,27 @@ class PwAllocatorProvider {
     return mAllocator.Allocate(pw::allocator::Layout(size));
   }
 
-  //! Returns memory of suitable alignment to hold an array of the given object
-  //! type, which may exceed alignment of std::max_align_t and therefore
-  //! excludes the use of use allocate().
-  //!
-  //! @param count the number of elements to allocate.
-  //! @return a pointer to allocated memory or nullptr if allocation failed.
+  //! Allocates uninitialized memory for an object of type T
   template <typename T>
-  inline T *allocateAlignedArray(size_t count) {
-    return static_cast<T *>(mAllocator.Allocate(
-        pw::allocator::Layout(sizeof(T) * count, alignof(T))));
+  void *allocate() {
+    // Note that skipping the alignment specification is slightly more
+    // efficient, hence the branch
+    if constexpr (alignof(T) > alignof(std::max_align_t)) {
+      return allocateArray<T>(1);
+    } else {
+      return allocate(sizeof(T));
+    }
+  }
+
+  //! Allocates uninitialized memory for an array of objects of type T
+  template <typename T>
+  void *allocateArray(size_t count) {
+    if constexpr (alignof(T) > alignof(std::max_align_t)) {
+      return static_cast<T *>(mAllocator.Allocate(
+          pw::allocator::Layout(sizeof(T) * count, alignof(T))));
+    } else {
+      return allocate(sizeof(T) * count);
+    }
   }
 
   void deallocate(void *ptr) {

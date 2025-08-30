@@ -32,16 +32,26 @@ class NanoappAllocatorProvider {
     return chreHeapAlloc(size);
   }
 
+  //! Allocates uninitialized memory for an object of type T
   template <typename T>
-  inline T *allocateAlignedArray(size_t /*count*/) {
+  void *allocate() {
+    static_assert(
+        alignof(T) <= alignof(std::max_align_t),
+        "NanoappAllocatorProvider does not support over-aligned allocations");
+    return allocate(sizeof(T));
+  }
+
+  //! Allocates uninitialized memory for an array of objects of type T
+  template <typename T>
+  void *allocateArray(size_t count) {
     // The CHRE API does not currently provide a standard way for nanoapps to
     // allocate over-aligned memory, but individual platforms may support it.
     // If this is necessary, consider filing an FR to the CHRE team, or use
     // a specialized allocator that routes to a platform-specific API.
     static_assert(
-        AlwaysFalse<T>::value,
-        "NanoappAllocatorProvider does not support aligned allocation.");
-    return nullptr;
+        alignof(T) <= alignof(std::max_align_t),
+        "NanoappAllocatorProvider does not support over-aligned allocations");
+    return allocate(sizeof(T) * count);
   }
 
   void deallocate(void *ptr) {

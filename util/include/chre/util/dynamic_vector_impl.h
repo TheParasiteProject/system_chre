@@ -176,14 +176,8 @@ bool DynamicVector<ElementType, AllocatorProviderT>::reserve(
 
   bool success = (newCapacity <= mCapacity);
   if (!success) {
-    ElementType *newData;
-    if constexpr (alignof(ElementType) > alignof(std::max_align_t)) {
-      newData = AllocatorProviderT::template allocateAlignedArray<ElementType>(
-          newCapacity);
-    } else {
-      newData = static_cast<ElementType *>(
-          AllocatorProviderT::allocate(newCapacity * sizeof(ElementType)));
-    }
+    ElementType *newData = static_cast<ElementType *>(
+        AllocatorProviderT::template allocateArray<ElementType>(newCapacity));
 
     if (newData != nullptr) {
       if (data() != nullptr) {
