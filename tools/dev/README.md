@@ -1,11 +1,10 @@
 # CHRE Development Tools
 
-This directory contains tools and configuration files for setting up a development
-environment for CHRE. The [Usage](#usage) section explains how one can use it.
-The [Configuration](#configuration) section explains the setup of shell environment variables
-through
-`env_config.json`. Some of the [Python scripts](#public) are designed to be used as a standalone
-tool to facilitate various needs.
+This directory contains the tools and configuration files required to establish a development
+environment for the Context Hub Runtime Environment (CHRE). The [Usage](#usage) section details the
+operational procedures, while the [Configuration](#configuration) section explains the setup of
+shell environment variables via `env_config.json`. Several [Python scripts](#public) are designed
+for standalone use to support specific development tasks.
 
 ## Usage
 
@@ -26,6 +25,10 @@ sourcing the `env_setup.sh` script.
 Now running `chre_lunch <platform-target>` will set up environment for a specific platform and
 target combination. For example, to start development of nanoapp on tinysys platform, run
 `chre_lunch tinysys-nanoapp`. This step is required to enable `chre_make` and `chre_flash` to work.
+
+Any missing command-line tools that are required will be listed out immediately after running
+`chre_lunch`. Currently, it's left to the user to install them as different OS has different
+commands for installation.
 
 ### Build a target
 

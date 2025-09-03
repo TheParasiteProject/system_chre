@@ -34,12 +34,32 @@ import subprocess
 import sys
 from typing import Any
 
-from shell_util import log_i, log_w, fatal_error
+from shell_util import log_i, log_w, fatal_error, check_dependencies
 
 
 def _print_env_var_pair(env_var: str):
   env_name, env_value = re.match(r"(.*)=(.*)", env_var).groups()
   print(f"\033[32m{env_name}\033[0m = {env_value}", file=sys.stderr)
+
+
+def _get_canonical_path(path: str):
+  return os.path.expanduser(os.path.expandvars(path))
+
+
+def _init_file(file_path_str: str):
+  from pathlib import Path
+
+  # Define the full path to your desired file
+  file_path = Path(file_path_str)
+
+  # Create the parent directories
+  # parents=True: creates all missing parent folders (like mkdir -p)
+  # exist_ok=True: doesn't raise an error if the directory already exists
+  file_path.parent.mkdir(parents=True, exist_ok=True)
+
+  # Create the file itself
+  # This creates an empty file if it doesn't exist.
+  file_path.touch()
 
 
 class _CustomArgumentParser(argparse.ArgumentParser):
@@ -122,7 +142,7 @@ def _assert_and_expand_env_variable(env_name, env_type: str, env_value: str):
   """
 
   def _check_single_value(value, v_type):
-    _expanded_value = os.path.expanduser(os.path.expandvars(value))
+    _expanded_value = _get_canonical_path(value)
     if v_type == "path":
       if not os.path.isdir(_expanded_value):
         fatal_error(f"Path '{value}' does not exist.")
@@ -150,7 +170,7 @@ def _assert_and_expand_env_variable(env_name, env_type: str, env_value: str):
 def _run_action(action_and_args):
   try:
     func = getattr(sys.modules[__name__], "_" + action_and_args[0])
-    expanded_args = [os.path.expanduser(os.path.expandvars(arg)) for arg in action_and_args[1:]]
+    expanded_args = [_get_canonical_path(arg) for arg in action_and_args[1:]]
     func(*expanded_args)
   except AttributeError:
     fatal_error(f"Unknown action: '{action_and_args[0]}'")
@@ -173,7 +193,7 @@ def _load_config(config_file: str = None) -> Any:
       fatal_error("CHRE_DEV_SCRIPT_PATH must be set before calling this script")
     config_file = os.path.join(os.getenv("CHRE_DEV_SCRIPT_PATH"), "env_config.json")
   else:
-    config_file = os.path.expanduser(os.path.expandvars(config_file))
+    config_file = _get_canonical_path(config_file)
 
   try:
     with open(config_file, "r") as f:
@@ -220,7 +240,8 @@ def _parse_platform_and_target_configs(
           continue
         env_map = {"CHRE_PLATFORM": platform_name,
                    "CHRE_TARGET_TYPE": target_name,
-                   "CHRE_BUILD_TARGET": target["build_target"]
+                   "CHRE_BUILD_TARGET": target["build_target"],
+                   "CHRE_DEV_PATH": _get_canonical_path(f"~/.chre_dev/{platform_name}-{target_name}")
                    }
         if platform.get("python_version"):
           env_map["CHRE_PYTHON_VERSION"] = platform.get("python_version")
@@ -298,8 +319,10 @@ def _parse_env_variable_fields(env_vars, predefined_envs):
   return env_var_pairs
 
 
+
 def main():
   """Parses command-line arguments and orchestrates the script's execution."""
+  check_dependencies(['cmake', 'protoc', 'pyenv', 'xxd'])
   arg_parser = _CustomArgumentParser(
     description="CHRE development environment setup",
   )
@@ -311,9 +334,14 @@ def main():
     "-c", "--config", type=str
   )
 
-  env_vars_file = os.path.join(os.environ["CHRE_DEV_PATH"], "env_vars.txt")
+  args = arg_parser.parse_args()
+  config_data = _load_config(args.config)
+  fixed_env_map, target_envs_configs = _parse_platform_and_target_configs(config_data,
+                                                                          args.platform_and_target)
+
+  env_vars_file = f"{fixed_env_map['CHRE_DEV_PATH']}/env_vars.txt"
+
   if os.path.exists(env_vars_file):
-    # output the env variables in env_vars.txt
     with open(env_vars_file, "r") as f:
       log_w("The following env variables are previously entered:\n")
       predefined_vars = []
@@ -327,11 +355,11 @@ def main():
       else:
         log_w("Overriding the existing dev environment settings...\n")
 
-  args = arg_parser.parse_args()
-  config_data = _load_config(args.config)
-  fixed_env_map, target_envs_configs = _parse_platform_and_target_configs(config_data,
-                                                                          args.platform_and_target)
   env_var_pairs = _parse_env_variable_fields(target_envs_configs, fixed_env_map)
+
+  # env_vars_file is only created after parsing env variables successfully.
+  if not os.path.exists(env_vars_file):
+    _init_file(env_vars_file)
 
   with open(env_vars_file, "w") as f:
     f.write("\n".join(env_var_pairs))
