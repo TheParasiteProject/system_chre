@@ -268,7 +268,7 @@ void testFinishUnloadingNanoappCallback(uint16_t /* type */, void *data,
   EventLoop &eventLoop = EventLoopManagerSingleton::get()->getEventLoop();
   uint16_t instanceId = 0;
   uint64_t *appId = static_cast<uint64_t *>(data);
-  eventLoop.findNanoappInstanceIdByAppId(*appId, &instanceId);
+  ASSERT_TRUE(eventLoop.findNanoappInstanceIdByAppId(*appId, &instanceId));
   eventLoop.unloadNanoapp(instanceId, true);
   memoryFree(data);
   TestEventQueueSingleton::get()->pushEvent(

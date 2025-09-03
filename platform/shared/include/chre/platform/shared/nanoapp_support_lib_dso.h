@@ -142,6 +142,13 @@ struct chreNslNanoappInfo {
   //!
   //! @since minor version 4
   uint32_t minChreApiVersion;
+
+  //! The requested priority to run the nanoapp. Note that this is best-effort
+  //! and the system may choose the appropriate thread priority for the nanoapp.
+  //! The value should be one of NANOAPP_REQUESTED_THREAD_PRIORITY_*.
+  //!
+  //! @since minor version 4
+  int8_t requestedThreadPriority;
 };
 
 /**
