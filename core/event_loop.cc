@@ -186,8 +186,6 @@ void EventLoop::run() {
 bool EventLoop::startNanoapp(UniquePtr<Nanoapp> &&nanoapp) {
   CHRE_ASSERT(!nanoapp.isNull());
   bool success = false;
-  auto *eventLoopManager = EventLoopManagerSingleton::get();
-  EventLoop &eventLoop = eventLoopManager->getEventLoop();
   uint16_t existingInstanceId;
 
   if (nanoapp.isNull()) {
@@ -198,8 +196,8 @@ bool EventLoop::startNanoapp(UniquePtr<Nanoapp> &&nanoapp) {
          ", first supported ver 0x%" PRIx32 ")",
          nanoapp->getTargetApiVersion(),
          static_cast<uint32_t>(CHRE_FIRST_SUPPORTED_API_VERSION));
-  } else if (eventLoop.findNanoappInstanceIdByAppId(nanoapp->getAppId(),
-                                                    &existingInstanceId)) {
+  } else if (findNanoappInstanceIdByAppId(nanoapp->getAppId(),
+                                          &existingInstanceId)) {
     LOGE("App with ID 0x%016" PRIx64 " already exists as instance ID %" PRIu16,
          nanoapp->getAppId(), existingInstanceId);
   } else {
@@ -226,7 +224,8 @@ bool EventLoop::startNanoapp(UniquePtr<Nanoapp> &&nanoapp) {
         notifyAppStatusChange(CHRE_EVENT_NANOAPP_STARTED, *newNanoapp);
 
 #ifdef CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
-        eventLoopManager->getChreMessageHubManager()
+        EventLoopManagerSingleton::get()
+            ->getChreMessageHubManager()
             .getMessageHub()
             .registerEndpoint(newNanoapp->getAppId());
 #endif  // CHRE_MESSAGE_ROUTER_SUPPORT_ENABLED
