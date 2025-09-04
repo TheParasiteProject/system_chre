@@ -3,4 +3,3 @@ out
 *.iml
 .vscode
 __pycache__
-.python-version

@@ -35,7 +35,7 @@ popd > /dev/null
 export CHRE_DEV_PATH=`realpath ~/.chre_dev`
 mkdir -p $CHRE_DEV_PATH
 # CHRE_PY_VENV_PATH is the path to the python virtual environment for CHRE development
-export CHRE_PY_VENV_PATH=$CHRE_DEV_PATH/venv
+
 
 #######################################
 # Sets up pyenv to use the required Python version.
@@ -45,23 +45,31 @@ export CHRE_PY_VENV_PATH=$CHRE_DEV_PATH/venv
 #   None
 #######################################
 _setup_pyenv() {
-    # Check for pyenv
-    if ! command -v pyenv &> /dev/null; then
-        echo "pyenv is not installed. Please install pyenv and try again."
-        return 1
-    fi
+  # Force PYENV_ROOT to the user's home directory
+  export PYENV_ROOT="$HOME/.pyenv"
 
-    # Install Python version if not already present.
-    # sudo is used because it's possible that the user doesn't have permission to modify
-    # /usr/share/pyenv/versions. Once the python version is installed sudo permission is not needed.
-    if ! sudo pyenv versions | grep -q "$CHRE_PYTHON_VERSION"; then
-        echo "Python version $CHRE_PYTHON_VERSION not found. Installing..."
-        sudo pyenv install "$CHRE_PYTHON_VERSION"
-    fi
+  # Add pyenv's bin directory to PATH if it's not already there
+  if [ -d "$PYENV_ROOT/bin" ]; then
+    case ":$PATH:" in
+      *:"$PYENV_ROOT/bin":*)
+        ;; # Already in PATH, do nothing
+      *)
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        ;;
+    esac
+  fi
 
-    # Make sure the correct python version is used to set up virtual environment
-    sudo pyenv local $CHRE_PYTHON_VERSION
-    export PATH=$HOME/.pyenv/shims:$PATH
+  # Run `pyenv init` only if the shims aren't already on the PATH
+  # This prevents adding the shims directory to your PATH multiple times.
+  if ! [[ ":$PATH:" == *":$PYENV_ROOT/shims:"* ]]; then
+      eval "$(pyenv init -)"
+  fi
+
+  # Install Python version if not already present.
+  if ! pyenv versions | grep -q "$CHRE_PYTHON_VERSION"; then
+      echo "Python version $CHRE_PYTHON_VERSION not found. Installing..."
+      pyenv install "$CHRE_PYTHON_VERSION"
+  fi
 }
 
 #######################################
@@ -105,6 +113,7 @@ _install_py_pkgs() {
 #   None
 #######################################
 _setup_python_virtual_env() {
+  local CHRE_PY_VENV_PATH=$CHRE_DEV_PATH/venv
   local current_py_version=$(python --version | awk '{print $2}')
   if [[ -n "$CHRE_PYTHON_VERSION" && "$current_py_version" != "$CHRE_PYTHON_VERSION" ]]; then
     local need_a_different_py_version=true
@@ -134,13 +143,12 @@ _setup_python_virtual_env() {
         echo "setting up pyenv..."
         _setup_pyenv || return 1
       fi
-      # Create and activate the virtual environment
-      if [[ -d "$CHRE_PY_VENV_PATH" ]]; then
-        echo "'$CHRE_PY_VENV_PATH' exists. Removing it..."
-        rm -rf "$CHRE_PY_VENV_PATH"
-      fi
       echo "Creating a new virtual environment '$CHRE_PY_VENV_PATH' with Python $CHRE_PYTHON_VERSION..."
+      pushd $CHRE_DEV_PATH > /dev/null
+      # Make sure the correct python version is used to set up virtual environment
+      pyenv local $CHRE_PYTHON_VERSION
       python -m venv "$CHRE_PY_VENV_PATH" || return 1
+      popd > /dev/null
       echo "Activating virtual environment..."
       source $CHRE_PY_VENV_PATH/bin/activate
     else
