@@ -197,6 +197,8 @@ endif
 
 # Simulator-specific Compiler Flags ############################################
 
+SIM_CFLAGS += $(FLATBUFFERS_CFLAGS)
+SIM_CFLAGS += -I$(CHRE_PREFIX)/platform/shared/fbs/include
 SIM_CFLAGS += -I$(CHRE_PREFIX)/platform/shared/include
 SIM_CFLAGS += -I$(CHRE_PREFIX)/platform/shared/nanoapp_memory_guard_no_op/include
 SIM_CFLAGS += -I$(CHRE_PREFIX)/platform/shared/public_platform_ble_pal
@@ -234,6 +236,8 @@ SIM_SRCS += platform/shared/chre_api_user_settings.cc
 SIM_SRCS += platform/shared/chre_api_version.cc
 SIM_SRCS += platform/shared/chre_api_wifi.cc
 SIM_SRCS += platform/shared/chre_api_wwan.cc
+SIM_SRCS += platform/shared/host_protocol_chre.cc
+SIM_SRCS += platform/shared/host_protocol_common.cc
 SIM_SRCS += platform/shared/init.cc
 SIM_SRCS += platform/shared/memory_manager.cc
 SIM_SRCS += platform/shared/nanoapp_abort.cc
