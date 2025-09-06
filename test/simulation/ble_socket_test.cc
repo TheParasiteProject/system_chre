@@ -81,9 +81,7 @@ class BleSocketTest : public TestBase {
 
   // Send an LE_Read_Buffer_Size (V2) CommandComplete event to the ProxyHost
   // so it can request the reservation of a number of LE ACL send credits.
-  pw::Status sendLeReadBufferResponseFromController(
-      uint8_t num_credits_to_reserve,
-      uint16_t le_acl_data_packet_length = 251) {
+  pw::Status sendLeReadBufferResponseFromController(uint8_t numLeAclPackets) {
     using pbe::EventCode;
     using pbe::LEReadBufferSizeV2CommandCompleteEventWriter;
 
@@ -101,8 +99,38 @@ class BleSocketTest : public TestBase {
 
     view.command_complete().command_opcode().Write(
         pbe::OpCode::LE_READ_BUFFER_SIZE_V2);
-    view.total_num_le_acl_data_packets().Write(num_credits_to_reserve);
-    view.le_acl_data_packet_length().Write(le_acl_data_packet_length);
+    view.total_num_le_acl_data_packets().Write(numLeAclPackets);
+    view.le_acl_data_packet_length().Write(251);
+
+    EXPECT_TRUE(view.Ok());
+
+    mProxyHost.value().HandleH4HciFromController(
+        {h4Packet.GetH4Type(), h4Packet.GetHciSpan()});
+    return pw::OkStatus();
+  }
+
+  // Send a Number_of_Completed_Packets event to ProxyHost so it will allow
+  // sending more ACL packets
+  pw::Status sendNumberOfCompletedPackets(uint16_t connectionHandle,
+                                          uint16_t numCompletedPackets) {
+    const uint16_t kNumConnections = 1;
+
+    const size_t kH4PacketSize =
+        pbe::NumberOfCompletedPacketsEvent::MinSizeInBytes() +
+        kNumConnections *
+            pbe::NumberOfCompletedPacketsEventData::IntrinsicSizeInBytes();
+    std::array<uint8_t, kH4PacketSize> hciArray;
+    hciArray.fill(0);
+    pw::bluetooth::proxy::H4PacketWithHci h4Packet{pbe::H4PacketType::EVENT,
+                                                   hciArray};
+
+    PW_TRY_ASSIGN(pbe::NumberOfCompletedPacketsEventWriter view,
+                  buildEvent<pbe::NumberOfCompletedPacketsEventWriter>(
+                      h4Packet, pbe::EventCode::NUMBER_OF_COMPLETED_PACKETS));
+
+    view.num_handles().Write(kNumConnections);
+    view.nocp_data()[0].connection_handle().Write(connectionHandle);
+    view.nocp_data()[0].num_completed_packets().Write(numCompletedPackets);
 
     EXPECT_TRUE(view.Ok());
 
@@ -126,7 +154,7 @@ class BleSocketTest : public TestBase {
       .endpointId = kDefaultTestNanoappId,
       .connectionHandle = 2,
       .rxConfig =
-          L2capCocConfig{.cid = 3, .mtu = 400, .mps = kRxMps, .credits = 2},
+          L2capCocConfig{.cid = 3, .mtu = 400, .mps = kRxMps, .credits = 0},
       .txConfig =
           L2capCocConfig{.cid = 4, .mtu = 400, .mps = 200, .credits = 2}};
 
@@ -205,6 +233,11 @@ TEST_F(BleSocketTest, BleSocketAcceptConnectionTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
+  sendLeReadBufferResponseFromController(1);
+  // Expect the L2capCoc to send the L2capFlowControlCreditInd after the socket
+  // is opened
+  EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
+
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
       .handleSocketOpenedByHost(mSocketData);
@@ -239,6 +272,11 @@ TEST_F(BleSocketTest, BleSocketNanoappNotFoundTest) {
   };
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
+
+  sendLeReadBufferResponseFromController(1);
+  // Expect the L2capCoc to send the L2capFlowControlCreditInd after the socket
+  // is opened
+  EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
 
   constexpr uint64_t kInvalidEndpointId = 1;
   mSocketData.endpointId = kInvalidEndpointId;
@@ -285,6 +323,11 @@ TEST_F(BleSocketTest, BleSocketDoNotAcceptConnectionTest) {
   };
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
+
+  sendLeReadBufferResponseFromController(1);
+  // Expect the L2capCoc to send the L2capFlowControlCreditInd after the socket
+  // is opened
+  EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
 
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
@@ -339,15 +382,18 @@ TEST_F(BleSocketTest, BleSocketBasicSendTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
+  sendLeReadBufferResponseFromController(2);
+  // Expect the L2capCoc to send the L2capFlowControlCreditInd after the socket
+  // is opened
+  EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
+
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
       .handleSocketOpenedByHost(mSocketData);
   waitForEvent(CHRE_EVENT_BLE_SOCKET_CONNECTION);
 
-  // Provide ACL credits to ProxyHost to allow the L2capChannel to start sending
-  // packets.
+  // Expect chreBleSocketSend to result in sending a packet to the BT Controller
   EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
-  sendLeReadBufferResponseFromController(1);
 
   SocketSendData data = {
       .data = mDefaultMessage,
@@ -459,6 +505,11 @@ TEST_F(BleSocketTest, BleSocketSendQueueFullTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
+  sendLeReadBufferResponseFromController(1);
+  // Expect the L2capCoc to send the L2capFlowControlCreditInd after the socket
+  // is opened
+  EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
+
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
       .handleSocketOpenedByHost(mSocketData);
@@ -484,10 +535,10 @@ TEST_F(BleSocketTest, BleSocketSendQueueFullTest) {
   waitForEvent(SOCKET_SEND, &status);
   EXPECT_EQ(status, CHRE_BLE_SOCKET_SEND_STATUS_QUEUE_FULL);
 
-  // Provide ACL credits to ProxyHost to allow the L2capChannel to start sending
-  // packets.
+  // Send an NOCP event to the ProxyHost to restore its ACL credit. This results
+  // in the L2capCoc sending the first queued packet to the BT Controller.
   EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
-  sendLeReadBufferResponseFromController(1);
+  sendNumberOfCompletedPackets(mSocketData.connectionHandle, 1);
 
   // First packet in queue is sent and its freeCallback is invoked.
   waitForEvent(SOCKET_SEND_FREE_CALLBACK);
@@ -531,6 +582,11 @@ TEST_F(BleSocketTest, BleSocketBasicReceiveTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
   UNUSED_VAR(appId);
+
+  sendLeReadBufferResponseFromController(1);
+  // Expect the L2capCoc to send the L2capFlowControlCreditInd after the socket
+  // is opened
+  EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
 
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
@@ -606,6 +662,11 @@ TEST_F(BleSocketTest, BleSocketInvalidRxTest) {
   };
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
+
+  sendLeReadBufferResponseFromController(1);
+  // Expect the L2capCoc to send the L2capFlowControlCreditInd after the socket
+  // is opened
+  EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
 
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
@@ -691,6 +752,11 @@ TEST_F(BleSocketTest, BleSocketBtResetTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
+  sendLeReadBufferResponseFromController(1);
+  // Expect the L2capCoc to send the L2capFlowControlCreditInd after the socket
+  // is opened
+  EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
+
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
       .handleSocketOpenedByHost(mSocketData);
@@ -736,6 +802,11 @@ TEST_F(BleSocketTest, BleSocketClosedAfterUnloadTest) {
   };
   uint64_t appId = loadNanoapp(MakeUnique<App>());
 
+  sendLeReadBufferResponseFromController(1);
+  // Expect the L2capCoc to send the L2capFlowControlCreditInd after the socket
+  // is opened
+  EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
+
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
       .handleSocketOpenedByHost(mSocketData);
@@ -769,6 +840,11 @@ TEST_F(BleSocketTest, BleSocketClosedAfterHostMessageTest) {
 
   uint64_t appId = loadNanoapp(MakeUnique<App>());
   UNUSED_VAR(appId);
+
+  sendLeReadBufferResponseFromController(1);
+  // Expect the L2capCoc to send the L2capFlowControlCreditInd after the socket
+  // is opened
+  EXPECT_CALL(mMockBtOffload, sendToController(_)).Times(1);
 
   EventLoopManagerSingleton::get()
       ->getBleSocketManager()
