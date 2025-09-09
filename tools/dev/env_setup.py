@@ -338,6 +338,7 @@ def main():
   config_data = _load_config(args.config)
   fixed_env_map, target_envs_configs = _parse_platform_and_target_configs(config_data,
                                                                           args.platform_and_target)
+  os.environ.update(fixed_env_map)
 
   env_vars_file = f"{fixed_env_map['CHRE_DEV_PATH']}/env_vars.txt"
 

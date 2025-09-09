@@ -31,12 +31,6 @@ pushd $CHRE_DEV_SCRIPT_PATH > /dev/null
 source ../common.sh
 popd > /dev/null
 
-# CHRE_DEV_PATH is the root directory containing env configs for CHRE development
-export CHRE_DEV_PATH=`realpath ~/.chre_dev`
-mkdir -p $CHRE_DEV_PATH
-# CHRE_PY_VENV_PATH is the path to the python virtual environment for CHRE development
-
-
 #######################################
 # Sets up pyenv to use the required Python version.
 # Globals:
@@ -65,10 +59,27 @@ _setup_pyenv() {
       eval "$(pyenv init -)"
   fi
 
-  # Install Python version if not already present.
-  if ! pyenv versions | grep -q "$CHRE_PYTHON_VERSION"; then
+  # Install Python version if not already present. We use `grep -q` for a quiet check.
+  if [[ -n "$CHRE_PYTHON_VERSION" ]] && ! pyenv versions | grep -q "$CHRE_PYTHON_VERSION"; then
       echo "Python version $CHRE_PYTHON_VERSION not found. Installing..."
       pyenv install "$CHRE_PYTHON_VERSION"
+  else
+    local current_global=$(pyenv global 2>/dev/null)
+    local default_global="3.11.11"
+    # Check if a global version is either not set or is set to "system".
+    if [[ -z "$current_global" ]] || [[ "$current_global" == "system" ]]; then
+      # Check if the target version is already installed by pyenv.
+      if ! pyenv versions --bare | grep -q "^${default_global}$"; then
+        echo "Installing global default version ${default_global} now..."
+        # Install the desired version. This may take a few minutes.
+        pyenv install "$default_global"
+      fi
+      # Set the desired version as the global default.
+      echo "Setting global Python version to ${default_global}..."
+      pyenv global "$default_global"
+    else
+      echo "Global Python version is already set to '${current_global}'."
+    fi
   fi
 }
 
@@ -101,10 +112,10 @@ _install_py_pkgs() {
 #######################################
 # Sets up a Python virtual environment for CHRE development.
 #
-# This function checks if a virtual environment is active. If not, it prompts
-# the user to create one. It handles using `pyenv` to switch to the correct
-# Python version if necessary before creating the virtual environment and
-# installing packages.
+# This function orchestrates the setup of a Python virtual environment. It
+# checks for an active virtual environment, and if none is found, it attempts
+# to activate an existing one or create a new one. It ensures that the
+# environment uses the Python version specified in the CHRE configuration.
 # Globals:
 #   CHRE_PYTHON_VERSION
 #   CHRE_DEV_SCRIPT_PATH
@@ -113,58 +124,106 @@ _install_py_pkgs() {
 #   None
 #######################################
 _setup_python_virtual_env() {
-  local CHRE_PY_VENV_PATH=$CHRE_DEV_PATH/venv
-  local current_py_version=$(python --version | awk '{print $2}')
-  if [[ -n "$CHRE_PYTHON_VERSION" && "$current_py_version" != "$CHRE_PYTHON_VERSION" ]]; then
-    local need_a_different_py_version=true
+  echo "Preparing to install python packages..."
+
+  if [[ -n "$VIRTUAL_ENV" ]]; then
+    _check_active_venv || return 1
+  else
+    _activate_or_create_venv || return 1
   fi
 
-  echo "Preparing to install python packages..."
-  if [[ -z "$VIRTUAL_ENV" ]]; then
-    echo "The installation of python packages must be done in a virtual environment."
+  _install_py_pkgs || return 1
+}
 
-    # check if there is already a python version exists under $CHRE_PY_VENV_PATH/bin/
-    if [[ -f "$CHRE_PY_VENV_PATH/bin/python" ]]; then
-      local venv_py_version=$($CHRE_PY_VENV_PATH/bin/python --version | awk '{print $2}')
-      if [[ -z "$CHRE_PYTHON_VERSION" || "$venv_py_version" == "$CHRE_PYTHON_VERSION" ]]; then
-        echo "Activating existing virtual environment under $CHRE_PY_VENV_PATH"
-        source $CHRE_PY_VENV_PATH/bin/activate
-        _install_py_pkgs || return 1
-        return
-      else
-        echo "The virtual environment under $CHRE_PY_VENV_PATH has python version $venv_py_version but $CHRE_PYTHON_VERSION is required."
-      fi
-    fi
+#######################################
+# Checks the active Python virtual environment.
+#
+# This function verifies that the active virtual environment is using the
+# required Python version. If the version is incorrect, it informs the user
+# and returns an error.
+# Globals:
+#   CHRE_PYTHON_VERSION
+# Arguments:
+#   None
+#######################################
+_check_active_venv() {
+  echo "An active virtual environment is detected at ${VIRTUAL_ENV}. Great!"
+  local current_py_version
+  current_py_version=$(python --version | awk '{print $2}')
+  if [[ -n "$CHRE_PYTHON_VERSION" && "$current_py_version" != "$CHRE_PYTHON_VERSION" ]]; then
+    echo "The virtual environment has python version $current_py_version but $CHRE_PYTHON_VERSION is required."
+    echo "Please deactivate the current virtual environment and try again."
+    return 1
+  fi
+}
 
-    echo -n "Shall we create a new one for you? [Y/n] "
-    read user_response
-    if [[ "$user_response" == "y" || "$user_response" == "Y" || "$user_response" == "" ]]; then
-      if [[ "$need_a_different_py_version" == "true" ]]; then
-        echo "setting up pyenv..."
-        _setup_pyenv || return 1
-      fi
-      echo "Creating a new virtual environment '$CHRE_PY_VENV_PATH' with Python $CHRE_PYTHON_VERSION..."
-      pushd $CHRE_DEV_PATH > /dev/null
-      # Make sure the correct python version is used to set up virtual environment
-      pyenv local $CHRE_PYTHON_VERSION
-      python -m venv "$CHRE_PY_VENV_PATH" || return 1
-      popd > /dev/null
-      echo "Activating virtual environment..."
-      source $CHRE_PY_VENV_PATH/bin/activate
+#######################################
+# Activates an existing or creates a new Python virtual environment.
+#
+# This function first checks for an existing CHRE virtual environment. If it
+# finds one with the correct Python version, it activates it. Otherwise, it
+# prompts the user to create a new one.
+# Globals:
+#   CHRE_DEV_PATH
+#   CHRE_PYTHON_VERSION
+# Arguments:
+#   None
+#######################################
+_activate_or_create_venv() {
+  local chre_py_venv_path=$CHRE_DEV_PATH/venv
+  if [[ -f "$chre_py_venv_path/bin/python" ]]; then
+    local venv_py_version
+    venv_py_version=$($chre_py_venv_path/bin/python --version | awk '{print $2}')
+    if [[ -z "$CHRE_PYTHON_VERSION" || "$venv_py_version" == "$CHRE_PYTHON_VERSION" ]]; then
+      echo "Activating existing virtual environment under $chre_py_venv_path"
+      source "$chre_py_venv_path/bin/activate"
+      return 0
     else
-      echo -e "\nPlease create a virtual environment and try again."
-      return 1
-    fi
-  else
-    echo "It looks like you are already in a virtual environment ${VIRTUAL_ENV}. Great!"
-    if [[ "$need_a_different_py_version" == "true" ]]; then
-      echo "The virtual environment has python version $current_py_version but $CHRE_PYTHON_VERSION is required."
+      echo "The virtual environment under $chre_py_venv_path has python version $venv_py_version but $CHRE_PYTHON_VERSION is required."
       echo "Please deactivate the current virtual environment and try again."
       return 1
     fi
   fi
 
-  _install_py_pkgs || return 1
+  echo "The installation of python packages must be done in a virtual environment."
+  echo -n "Shall we create a new one for you? [Y/n] "
+  read user_response
+  if [[ "$user_response" == "y" || "$user_response" == "Y" || "$user_response" == "" ]]; then
+    _create_new_venv
+  else
+    echo -e "\nPlease create a virtual environment and try again."
+    return 1
+  fi
+}
+
+#######################################
+# Creates a new Python virtual environment.
+#
+# This function sets up a new Python virtual environment. If a Python version
+# is specified in the CHRE configuration, it uses `pyenv` to manage that
+# version. Otherwise, it falls back to using `pyenv`'s default Python version.
+# Globals:
+#   CHRE_DEV_PATH
+#   CHRE_PYTHON_VERSION
+# Arguments:
+#   None
+#######################################
+_create_new_venv() {
+  local chre_py_venv_path=$CHRE_DEV_PATH/venv
+  echo "Setting up pyenv..."
+  _setup_pyenv || return 1
+  pushd $CHRE_DEV_PATH > /dev/null
+  if [[ -n "$CHRE_PYTHON_VERSION" ]]; then
+    pyenv local "$CHRE_PYTHON_VERSION"
+  fi
+  python -m venv "$chre_py_venv_path"
+  local success=$?
+  popd > /dev/null
+  if [[ $success -ne 0 ]]; then
+    return 1
+  fi
+  echo "Activating virtual environment..."
+  source "$chre_py_venv_path/bin/activate"
 }
 
 #######################################

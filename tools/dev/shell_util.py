@@ -95,11 +95,12 @@ class ShellSession:
   SUCCESS = "\033[32m[OK]\033[0m"
   FAILURE = "\033[31m[FAILED]\033[0m"
 
-  def __init__(self, shell_cmd="bash", env=None):
+  def __init__(self, shell_cmd="bash", cmd_width=80, env=None):
     # Move pexpect to local import as ShellSession is the only place using it.
     import pexpect
     if env is None:
       env = {"SCRIPT_ONLY": "yes"}
+    self.cmd_width = cmd_width  # Used for pretty printing
     self.session = pexpect.spawn(shell_cmd, env=env)
     self.session.expect(r"(.*)[$#>] ")
     self.prompt = self.session.match.group(1).decode()
@@ -135,7 +136,7 @@ class ShellSession:
   def run_until_success(
       self, cmd, is_successful, retry_interval=1, timeout=20, show_output=False
   ):
-    print("{:<80}".format(cmd), end="", flush=True)
+    print(f"{cmd:<{self.cmd_width}}", end="", flush=True)
     start_time = time.perf_counter()
     output = self._execute(cmd, timeout=timeout)
     while not is_successful(output):
