@@ -33,7 +33,6 @@ using aidl::android::hardware::contexthub::IContextHub;
 using aidl::android::hardware::contexthub::IContextHubCallback;
 using base::GetBoolProperty;
 using base::ScopedLockAssertion;
-using flags::abort_if_client_callback_is_stuck;
 using ndk::ScopedAStatus;
 
 namespace {
@@ -120,7 +119,7 @@ bool HalClient::connect() {
   const bool result = initConnection() == HalError::SUCCESS;
   // Check if mWatchdogTask can already be joined to make sure the watchdog task
   // is only created once.
-  if (abort_if_client_callback_is_stuck() && result) {
+  if (result) {
     std::lock_guard lock(mWatchdogCreationMutex);
     if (!mWatchdogTask.joinable()) {
       mWatchdogTask =
