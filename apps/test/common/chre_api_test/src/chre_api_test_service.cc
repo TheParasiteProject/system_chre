@@ -185,6 +185,7 @@ bool ChreApiTestService::validateInputAndCallChreGetSensorInfo(
 
   return true;
 }
+
 bool ChreApiTestService::validateInputAndCallChreBleReadRssiAsync(
     const chre_rpc_ChreBleReadRssiRequest &request, chre_rpc_Status &response) {
   if (request.connectionHandle == 0) {

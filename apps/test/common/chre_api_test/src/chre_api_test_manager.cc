@@ -275,6 +275,29 @@ void ChreApiTestService::ChreBleStopScanSync(
   }
 }
 
+void ChreApiTestService::ChreBleReadRssiSync(
+    const chre_rpc_ChreBleReadRssiRequest &request,
+    ServerWriter<chre_rpc_ChreBleReadRssiEvent> &writer) {
+  if (mRssiWriter.has_value()) {
+    ChreApiTestManagerSingleton::get()->setPermissionForNextMessage(
+        CHRE_MESSAGE_PERMISSION_NONE);
+    writer.Finish();
+    LOGE("ChreBleReadRssiSync: a sync message already exits");
+    return;
+  }
+
+  mRssiWriter = std::move(writer);
+  CHRE_ASSERT(mSyncTimerHandle == CHRE_TIMER_INVALID);
+
+  chre_rpc_Status status;
+  if (!validateInputAndCallChreBleReadRssiAsync(request, status) ||
+      !status.status || !startSyncTimer()) {
+    sendFailureAndFinishCloseWriter(mRssiWriter);
+    mSyncTimerHandle = CHRE_TIMER_INVALID;
+    LOGD("ChreBleReadRssiSync: status false (error)");
+  }
+}
+
 // End ChreApiTestService RPC sync functions
 
 // Start ChreApiTestService event functions
@@ -328,29 +351,6 @@ void ChreApiTestService::GatherEvents(
     LOGD("GatherEvents: mEventTypeCount: %" PRIu32
          " mEventExpectedCount: %" PRIu32,
          mEventTypeCount, mEventExpectedCount);
-  }
-}
-
-void ChreApiTestService::ChreBleReadRssiSync(
-    const chre_rpc_ChreBleReadRssiRequest &request,
-    ServerWriter<chre_rpc_ChreBleReadRssiEvent> &writer) {
-  if (mRssiWriter.has_value()) {
-    ChreApiTestManagerSingleton::get()->setPermissionForNextMessage(
-        CHRE_MESSAGE_PERMISSION_NONE);
-    writer.Finish();
-    LOGE("ChreBleReadRssiSync: a sync message already exits");
-    return;
-  }
-
-  mRssiWriter = std::move(writer);
-  CHRE_ASSERT(mSyncTimerHandle == CHRE_TIMER_INVALID);
-
-  chre_rpc_Status status;
-  if (!validateInputAndCallChreBleReadRssiAsync(request, status) ||
-      !status.status || !startSyncTimer()) {
-    sendFailureAndFinishCloseWriter(mRssiWriter);
-    mSyncTimerHandle = CHRE_TIMER_INVALID;
-    LOGD("ChreBleReadRssiSync: status false (error)");
   }
 }
 
