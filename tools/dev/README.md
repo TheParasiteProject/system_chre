@@ -152,11 +152,37 @@ functions defined in `env_setup.py`.
         "action_clone_repo",
         "https://a-link.to.your.qsh.branch",
         "$QSH_BRANCH",
-        "/tmp/qsh-$QSH_BRANCH"
+        "$CHRE_DEV_PATH/mirror-qsh-$QSH_BRANCH"
       ]
       ```
       the above action will clone the qsh repository from the branch specified by the
-      environment variable `QSH_BRANCH` into the directory `/tmp/qsh-$QSH_BRANCH`.
+      environment variable `QSH_BRANCH` into the directory `$CHRE_DEV_PATH/mirror-qsh-$QSH_BRANCH`.
+
+## File Structure
+
+The CHRE development environment maintains a structured file system to ensure consistency and
+isolation between different platform-target configurations. This organization is centered around
+the `CHRE_DEV_PATH` environment variable.
+
+### `CHRE_DEV_PATH`
+
+This is the root directory for all development files related to a specific platform-target
+combination. It is automatically set to `~/.chre_dev/<platform_name>-<target_name>` when you run
+`chre_lunch`. For example, if you run `chre_lunch tinysys-nanoapp`, `CHRE_DEV_PATH` will be set to
+`~/.chre_dev/tinysys-nanoapp`.
+
+### Python Virtual Environment
+
+To maintain dependency isolation, a Python virtual environment is created within the
+`CHRE_DEV_PATH`. Specifically, it is located at `$CHRE_DEV_PATH/venv`. This ensures that each
+platform-target combination has its own set of Python packages, preventing version conflicts.
+
+### `env_vars.txt`
+
+To streamline the setup process, the environment variables you provide during the `chre_lunch`
+are saved to a file named `env_vars.txt` inside the `CHRE_DEV_PATH`. The next time you run
+`chre_lunch` for the same platform-target, the script will detect this file and ask if you want to
+reuse the saved settings. This feature saves you from re-entering the same information repeatedly.
 
 ## Python Scripts
 
