@@ -641,7 +641,9 @@ void BasicWifiTest::validateWifiScanResult(uint8_t count,
     validateFreqAndChannel(results[i].primaryChannel, results[i].band,
                            mApiVersion);
     validateCenterFreq(results[i], mApiVersion);
-    validateVenueInfo(results[i]);
+    if (mWifiCapabilities & CHRE_WIFI_CAPABILITIES_VENUE_INFO) {
+      validateVenueInfo(results[i]);
+    }
   }
 }
 
