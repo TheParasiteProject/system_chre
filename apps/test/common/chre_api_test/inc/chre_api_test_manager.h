@@ -129,17 +129,17 @@ class ChreApiTestService final
                            ServerWriter<chre_rpc_GeneralSyncMessage> &writer);
 
   /**
+   * Starts to read the RSSI
+   */
+  void ChreBleReadRssiSync(const chre_rpc_ChreBleReadRssiRequest &request,
+                           ServerWriter<chre_rpc_ChreBleReadRssiEvent> &writer);
+
+  /**
    * Gathers events that match the input filter before the timeout in ns or
    * the max event count.
    */
   void GatherEvents(const chre_rpc_GatherEventsInput &request,
                     ServerWriter<chre_rpc_GeneralEventsMessage> &writer);
-
-  /**
-   * Starts to read the RSSI
-   */
-  void ChreBleReadRssiSync(const chre_rpc_ChreBleReadRssiRequest &request,
-                           ServerWriter<chre_rpc_ChreBleReadRssiEvent> &writer);
 
   /**
    * Handles a BLE event from CHRE.
